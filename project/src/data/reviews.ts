@@ -1,0 +1,147 @@
+export interface Review {
+  id: string;
+  lawyerId: number;
+  reviewerName: string;
+  rating: number;
+  date: string;
+  comment: string;
+}
+
+export const reviews: Review[] = [
+  {
+    id: "R001",
+    lawyerId: 1,
+    reviewerName: "Rajesh Kumar",
+    rating: 5,
+    date: "2025-06-15",
+    comment: "Excellent support during my salary dispute case. Adv. Priya was very professional and helped me recover all my pending dues within 2 months.",
+  },
+  {
+    id: "R002",
+    lawyerId: 1,
+    reviewerName: "Anita Desai",
+    rating: 4,
+    date: "2025-05-28",
+    comment: "Very knowledgeable and responsive. Guided me through wrongful termination case with clarity.",
+  },
+  {
+    id: "R003",
+    lawyerId: 1,
+    reviewerName: "Mohit Patel",
+    rating: 5,
+    date: "2025-04-10",
+    comment: "Highly recommend! Won my case against the employer who refused to pay notice period dues.",
+  },
+  {
+    id: "R004",
+    lawyerId: 2,
+    reviewerName: "Sneha Joshi",
+    rating: 5,
+    date: "2025-06-20",
+    comment: "Outstanding expertise in labour law. Adv. Rahul handled my complex corporate dispute with precision.",
+  },
+  {
+    id: "R005",
+    lawyerId: 2,
+    reviewerName: "Vikram Singh",
+    rating: 5,
+    date: "2025-05-15",
+    comment: "Best lawyer I've worked with. Very thorough and always available to answer questions.",
+  },
+  {
+    id: "R006",
+    lawyerId: 3,
+    reviewerName: "Kavya Reddy",
+    rating: 4,
+    date: "2025-06-12",
+    comment: "Compassionate and understanding during my divorce proceedings. Made a difficult time easier.",
+  },
+  {
+    id: "R007",
+    lawyerId: 3,
+    reviewerName: "Ramesh Iyer",
+    rating: 4,
+    date: "2025-05-05",
+    comment: "Good counsel on custody matters. Fair pricing and transparent process.",
+  },
+  {
+    id: "R008",
+    lawyerId: 4,
+    reviewerName: "Deepak Krishnan",
+    rating: 5,
+    date: "2025-06-18",
+    comment: "Exceptional property lawyer! Helped me resolve a complex land dispute that had been pending for 3 years.",
+  },
+  {
+    id: "R009",
+    lawyerId: 4,
+    reviewerName: "Lakshmi Narayan",
+    rating: 5,
+    date: "2025-06-01",
+    comment: "Worth every rupee. Adv. Vikram's knowledge of property law is unmatched.",
+  },
+  {
+    id: "R010",
+    lawyerId: 4,
+    reviewerName: "Sundar Rajan",
+    rating: 5,
+    date: "2025-05-20",
+    comment: "Professional and efficient. Handled my real estate transaction flawlessly.",
+  },
+  {
+    id: "R011",
+    lawyerId: 5,
+    reviewerName: "Pradeep Kulkarni",
+    rating: 5,
+    date: "2025-06-10",
+    comment: "Adv. Deepa secured bail for me within 48 hours. Forever grateful for her expertise.",
+  },
+  {
+    id: "R012",
+    lawyerId: 5,
+    reviewerName: "Sanjay Patil",
+    rating: 4,
+    date: "2025-05-25",
+    comment: "Strong courtroom presence and excellent defense strategy. Highly recommended.",
+  },
+  {
+    id: "R013",
+    lawyerId: 6,
+    reviewerName: "Amit Sharma",
+    rating: 4,
+    date: "2025-06-08",
+    comment: "Helped me recover money in a cheque bounce case. Very professional service.",
+  },
+  {
+    id: "R014",
+    lawyerId: 7,
+    reviewerName: "Divya Reddy",
+    rating: 5,
+    date: "2025-06-14",
+    comment: "Adv. Meera handled my divorce with great sensitivity. She understood my situation perfectly.",
+  },
+  {
+    id: "R015",
+    lawyerId: 7,
+    reviewerName: "Krishna Murthy",
+    rating: 5,
+    date: "2025-05-30",
+    comment: "Excellent family law attorney. Got favorable custody arrangement for my children.",
+  },
+  {
+    id: "R016",
+    lawyerId: 8,
+    reviewerName: "Ganesh Pawar",
+    rating: 5,
+    date: "2025-06-16",
+    comment: "Veteran lawyer with incredible experience. Won my service law case against all odds.",
+  },
+  {
+    id: "R017",
+    lawyerId: 8,
+    reviewerName: "Ashok Rane",
+    rating: 5,
+    date: "2025-06-05",
+    comment: "Best in the business for labour disputes. Adv. Suresh is a legend!",
+  },
+];

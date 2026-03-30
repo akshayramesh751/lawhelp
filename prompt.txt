@@ -1,0 +1,110 @@
+I have a working React frontend for a legal services marketplace called NyayaConnect. Now I need to build and connect the backend. Guide me step by step with code. Ask me one stage at a time and wait for confirmation before proceeding.
+
+## PROJECT CONTEXT
+- Frontend: React + Tailwind, currently uses hardcoded mock data
+- Target stack: Node.js + Express (backend), MongoDB Atlas (database), Twilio (WhatsApp notifications)
+- The app has: Lawyer listings, Bookings (pending/confirmed/rejected/completed), Ratings & Reviews, WhatsApp notifications to lawyers and users
+
+---
+
+## STAGE 1 — Project Setup
+Help me initialize a Node.js + Express backend project.
+- Create folder structure: /server with subfolders /routes /models /controllers /middleware /utils
+- Initialize package.json with dependencies: express, mongoose, dotenv, cors, twilio, nodemon
+- Create a basic Express server (index.js) with CORS enabled for localhost:5173 (Vite frontend)
+- Set up .env file template with: MONGO_URI, PORT, TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_WHATSAPP_FROM
+- Confirm everything runs with: node index.js → "Server running on port 5000"
+
+## STAGE 2 — MongoDB Atlas Setup + Mongoose Models
+Help me connect to MongoDB Atlas and create all data models.
+
+Models needed:
+
+1. **Lawyer**
+   - name (String), specializations ([String]), city (String), experience (Number)
+   - rating (Number, default 0), totalReviews (Number, default 0)
+   - cost (Number), languages ([String]), bio (String)
+   - education (String), barRegNo (String)
+   - phone (String) — for WhatsApp notifications
+   - isVerified (Boolean, default false)
+
+2. **User**
+   - name (String), email (String, unique), phone (String)
+   - passwordHash (String)
+   - createdAt (Date)
+
+3. **Booking**
+   - userId (ref: User), lawyerId (ref: Lawyer)
+   - date (Date), timeSlot (String)
+   - status (enum: ['pending', 'confirmed', 'rejected', 'completed'], default: 'pending')
+   - cost (Number)
+   - createdAt (Date)
+
+4. **Review**
+   - bookingId (ref: Booking), userId (ref: User), lawyerId (ref: Lawyer)
+   - rating (Number, 1–5), comment (String)
+   - createdAt (Date)
+
+Also write a seed script (seed.js) that inserts the 8 mock lawyers from my frontend into MongoDB.
+
+## STAGE 3 — REST API Routes
+Build all Express routes and controllers:
+
+**Lawyers**
+- GET /api/lawyers — fetch all, support query params: ?specialization=&city=&minRating=&maxCost=
+- GET /api/lawyers/:id — fetch single lawyer with reviews
+
+**Bookings**
+- POST /api/bookings — create booking (body: userId, lawyerId, date, timeSlot, cost), status = pending
+- GET /api/bookings?userId= — get all bookings for a user
+- PATCH /api/bookings/:id/status — update status (for lawyer approve/reject, or system complete)
+
+**Reviews**
+- POST /api/reviews — submit review (body: bookingId, userId, lawyerId, rating, comment)
+  - After saving: recalculate lawyer's average rating and update Lawyer document
+- GET /api/reviews?lawyerId= — get all reviews for a lawyer
+
+## STAGE 4 — Twilio WhatsApp Integration
+Help me set up Twilio to send WhatsApp messages.
+
+Two triggers:
+
+1. **On booking creation (POST /api/bookings)**:
+   Send to lawyer's phone:
+   "New booking request from [User Name] for [Date] at [Time]. Reply CONFIRM or REJECT via the whatsapp chat."
+
+2. **On booking status update (PATCH /api/bookings/:id/status)**:
+   If confirmed → Send to user's phone:
+   "✅ Your booking with [Lawyer Name] on [Date] at [Time] is confirmed."
+   If rejected → Send to user's phone:
+   "❌ Your booking with [Lawyer Name] was not accepted. Please try booking another lawyer."
+
+Use Twilio sandbox for WhatsApp. Show me how to configure and test it.
+
+## STAGE 5 — Frontend API Integration
+Help me replace all mock data in the React frontend with real API calls.
+
+- Install axios in frontend
+- Create /src/api/lawyers.js, /src/api/bookings.js, /src/api/reviews.js — each exports async functions
+- Replace mock lawyers array with useEffect + axios.get('/api/lawyers') call
+- Replace filter logic: pass filters as query params to the API instead of filtering client-side
+- Replace mock bookings in dashboard with real fetch by userId
+- Wire up POST /api/bookings on "Confirm Booking" button
+- Wire up POST /api/reviews on rating form submit
+
+## STAGE 6 — Status Auto-Completion
+Write a cron job (using node-cron) that runs every hour:
+- Finds all bookings with status = 'confirmed' where date+time has passed
+- Updates their status to 'completed'
+Install node-cron, set it up in index.js
+
+## STAGE 7 — Basic Auth (Optional but recommended)
+Add simple JWT-based auth:
+- POST /api/auth/register — hash password with bcrypt, save user
+- POST /api/auth/login — compare hash, return JWT
+- Middleware: verifyToken.js — protect booking and review routes
+- Frontend: store token in memory (not localStorage), attach as Authorization header
+
+---
+
+Start with Stage 1. Show me the exact folder structure, all files with code, and tell me what to run to confirm it works before we move to Stage 2.
