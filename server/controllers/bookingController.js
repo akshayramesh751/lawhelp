@@ -43,17 +43,59 @@ const createBooking = async (req, res) => {
 const handleTwilioWebhook = async (req, res) => {
   try {
     const incomingMsg = req.body.Body ? req.body.Body.trim().toUpperCase() : '';
-    const fromNumber = req.body.From; // 'whatsapp:+91...'
+    // Twilio `req.body.From` looks like 'whatsapp:+919902746555'
+    const fromNumber = req.body.From ? req.body.From.replace('whatsapp:', '') : '';
 
-    // IMPORTANT: Twilio needs you to find the most recent pending booking linked to this phone number
-    // For now, this is a skeleton showing where the reply logic belongs!
     console.log(`[TWILIO WEBHOOK] Received reply: ${incomingMsg} from ${fromNumber}`);
 
-    // ... you would search MongoDB for the pending booking and update its status here.
+    let responseMessage = `Your response "${incomingMsg}" was logged successfully.`;
+    const newStatus = incomingMsg === 'CONFIRM' ? 'confirmed' : incomingMsg === 'REJECT' ? 'rejected' : null;
 
-    // Respond to Twilio so it stops trying to send the message
+    if (newStatus) {
+      // Find the lawyer with this phone number
+      const lawyer = await Lawyer.findOne({ phone: fromNumber });
+      
+      if (lawyer) {
+        // Find most recent pending booking for this lawyer
+        const booking = await Booking.findOne({ 
+          lawyerId: lawyer._id, 
+          status: 'pending' 
+        }).sort({ createdAt: -1 }).populate('userId');
+
+        if (booking) {
+          booking.status = newStatus;
+          await booking.save();
+          
+          responseMessage = `Successfully ${newStatus} the booking for ${booking.userId ? booking.userId.name : 'client'}.`;
+
+          // Notify the client about the status change
+          if (booking.userId && booking.userId.phone) {
+            const formattedDate = new Date(booking.date).toLocaleDateString();
+            let userMessage = '';
+            
+            if (newStatus === 'confirmed') {
+              userMessage = `✅ Your booking with ${lawyer.name} on ${formattedDate} at ${booking.timeSlot} is confirmed.`;
+            } else if (newStatus === 'rejected') {
+              userMessage = `❌ Your booking with ${lawyer.name} was not accepted. Please try booking another lawyer.`;
+            }
+
+            if (userMessage) {
+              await sendWhatsAppMessage(booking.userId.phone, userMessage);
+            }
+          }
+        } else {
+          responseMessage = `No pending bookings found to process.`;
+        }
+      } else {
+        responseMessage = `We couldn't find a Lawyer profile matching your phone number.`;
+      }
+    } else {
+      responseMessage = `Invalid command. Please reply CONFIRM or REJECT.`;
+    }
+
+    // Respond to Twilio so it stops retrying and optionally sends a message to the lawyer confirming success
     res.set('Content-Type', 'text/xml');
-    res.send(`<Response><Message>Your response "${incomingMsg}" was logged successfully.</Message></Response>`);
+    res.send(`<Response><Message>${responseMessage}</Message></Response>`);
   } catch (error) {
     console.error('Webhook Error:', error);
     res.status(500).send('Error handling response');

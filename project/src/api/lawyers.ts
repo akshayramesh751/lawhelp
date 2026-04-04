@@ -1,13 +1,11 @@
-import axios from 'axios';
-
-const API_URL = 'http://localhost:5000/api/lawyers';
+import client from './client';
 
 export const getLawyers = async (filters: any) => {
-  const { data } = await axios.get(API_URL, { params: filters });
+  const { data } = await client.get('/lawyers', { params: filters });
   return data;
 };
 
 export const getLawyerById = async (id: string | number) => {
-  const { data } = await axios.get(`${API_URL}/${id}`);
+  const { data } = await client.get(`/lawyers/${id}`);
   return data;
 };

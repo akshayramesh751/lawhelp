@@ -1,10 +1,22 @@
-import { Scale } from "lucide-react";
+import { Scale, LogOut, User as UserIcon } from "lucide-react";
+import { User } from "firebase/auth";
+import { logout } from "../utils/firebase";
 
 interface NavbarProps {
   onNavigate: (page: string) => void;
+  user: User | null;
 }
 
-export default function Navbar({ onNavigate }: NavbarProps) {
+export default function Navbar({ onNavigate, user }: NavbarProps) {
+  const handleLogout = async () => {
+    try {
+      await logout();
+      onNavigate("home");
+    } catch (error) {
+      console.error("Logout failed", error);
+    }
+  };
+
   return (
     <nav className="fixed top-0 left-0 right-0 z-50 bg-navy-100 border-b border-gray-800 backdrop-blur-sm">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -35,12 +47,39 @@ export default function Navbar({ onNavigate }: NavbarProps) {
             </button>
           </div>
 
-          <button
-            onClick={() => onNavigate("dashboard")}
-            className="bg-gold hover:bg-gold-500 text-navy px-6 py-2 rounded-lg font-semibold transition-all hover:shadow-lg hover:shadow-gold/20"
-          >
-            My Account
-          </button>
+          <div className="flex items-center gap-4">
+            {user ? (
+              <div className="flex items-center gap-4">
+                <button
+                  onClick={() => onNavigate("dashboard")}
+                  className="flex items-center gap-2 text-gray-300 hover:text-gold transition-colors"
+                >
+                  {user.photoURL ? (
+                    <img src={user.photoURL} alt={user.displayName || "User"} className="w-8 h-8 rounded-full border border-gold/30" />
+                  ) : (
+                    <div className="w-8 h-8 rounded-full bg-gray-700 flex items-center justify-center">
+                      <UserIcon className="w-4 h-4 text-gray-400" />
+                    </div>
+                  )}
+                  <span className="hidden sm:inline font-medium">{user.displayName?.split(' ')[0]}</span>
+                </button>
+                <button
+                  onClick={handleLogout}
+                  className="p-2 text-gray-400 hover:text-red-400 transition-colors"
+                  title="Logout"
+                >
+                  <LogOut className="w-5 h-5" />
+                </button>
+              </div>
+            ) : (
+              <button
+                onClick={() => onNavigate("dashboard")} // This will trigger login in App.tsx
+                className="bg-gold hover:bg-gold-500 text-navy px-6 py-2 rounded-lg font-semibold transition-all hover:shadow-lg hover:shadow-gold/20"
+              >
+                Sign In
+              </button>
+            )}
+          </div>
         </div>
       </div>
     </nav>
