@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { CheckCircle2, Clock, Phone } from "lucide-react";
+import { CheckCircle2, Clock, Mail, ArrowRight } from "lucide-react";
 import { getLawyerById } from "../api/lawyers";
 
 interface BookingConfirmPageProps {
@@ -30,7 +30,7 @@ export default function BookingConfirmPage({
   if (!lawyer) {
     return (
       <div className="min-h-screen pt-16 flex items-center justify-center">
-        <p className="text-gray-400">Loading booking information...</p>
+        <div className="w-8 h-8 border-4 border-[#C9A84C]/20 border-t-[#C9A84C] rounded-full animate-spin" />
       </div>
     );
   }
@@ -38,83 +38,92 @@ export default function BookingConfirmPage({
   const dashIndex = slot?.indexOf("-") || 0;
   const date = slot?.substring(0, dashIndex);
   const time = slot?.substring(dashIndex + 1);
+  const BookingId = `BK${Date.now().toString().slice(-6)}`;
 
   return (
-    <div className="min-h-screen pt-16 flex items-center justify-center px-4">
-      <div className="max-w-2xl w-full fade-in">
-        <div className="bg-navy-50 rounded-2xl border border-gold/30 p-8 text-center mb-6">
-          <div className="inline-flex items-center justify-center w-20 h-20 bg-gold/10 rounded-full mb-6">
-            <CheckCircle2 className="w-12 h-12 text-gold" />
-          </div>
+    <div className="min-h-screen pt-16 flex items-center justify-center px-4 py-12">
+      <div className="max-w-lg w-full fade-in">
 
-          <h1 className="text-3xl font-serif font-bold text-white mb-3">
-            Booking Requested!
+        {/* Success Icon */}
+        <div className="text-center mb-8">
+          <div className="inline-flex items-center justify-center w-16 h-16 bg-[#C9A84C]/10 rounded-2xl mb-5">
+            <CheckCircle2 className="w-9 h-9 text-[#C9A84C]" />
+          </div>
+          <h1 className="text-3xl font-serif font-bold text-white mb-2">
+            Booking Requested
           </h1>
-          <p className="text-gray-400 mb-8">
+          <p className="text-sm text-[#dce1fb]/40">
             Your consultation request has been sent to the lawyer
           </p>
+        </div>
 
-          <div className="bg-navy rounded-xl p-6 border border-gray-800 text-left space-y-4 mb-8">
-            <div className="flex justify-between items-start">
+        {/* Booking Details Card */}
+        <div className="bg-[#0c1324] rounded-2xl border border-white/[0.06] overflow-hidden mb-4">
+
+          {/* Card Header */}
+          <div className="px-6 py-5 border-b border-white/[0.04]">
+            <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-400 mb-1">Lawyer</p>
-                <p className="text-white font-semibold text-lg">{lawyer.name}</p>
+                <p className="text-[10px] uppercase tracking-widest text-[#C9A84C]/60 mb-1">Lawyer</p>
+                <p className="text-white font-semibold">{lawyer.name}</p>
               </div>
-              <span className="px-3 py-1 bg-yellow-500/10 text-yellow-500 text-sm rounded-lg border border-yellow-500/20 flex items-center gap-2">
-                <Clock className="w-4 h-4" />
+              <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-amber-500/10 text-amber-400 text-xs font-medium rounded-full border border-amber-500/20">
+                <Clock className="w-3 h-3" />
                 Pending Approval
               </span>
             </div>
+          </div>
 
-            <div className="grid grid-cols-2 gap-4 pt-4 border-t border-gray-800">
-              <div>
-                <p className="text-sm text-gray-400 mb-1">Date</p>
-                <p className="text-white font-semibold">{date}</p>
-              </div>
-              <div>
-                <p className="text-sm text-gray-400 mb-1">Time</p>
-                <p className="text-white font-semibold">{time}</p>
-              </div>
+          {/* Date & Time Row */}
+          <div className="grid grid-cols-2 divide-x divide-white/[0.04]">
+            <div className="px-6 py-5">
+              <p className="text-[10px] uppercase tracking-widest text-[#C9A84C]/60 mb-1">Date</p>
+              <p className="text-white font-semibold text-sm">{date}</p>
             </div>
-
-            <div className="pt-4 border-t border-gray-800">
-              <div className="flex justify-between items-center">
-                <span className="text-gray-400">Session Cost</span>
-                <span className="text-gold font-bold text-2xl">₹{lawyer.cost}</span>
-              </div>
+            <div className="px-6 py-5">
+              <p className="text-[10px] uppercase tracking-widest text-[#C9A84C]/60 mb-1">Time Slot</p>
+              <p className="text-white font-semibold text-sm">{time}</p>
             </div>
           </div>
 
-          <div className="bg-gold/10 border border-gold/20 rounded-xl p-4 mb-6">
-            <div className="flex items-start gap-3">
-              <Phone className="w-5 h-5 text-gold flex-shrink-0 mt-1" />
-              <div className="text-left">
-                <p className="text-white font-semibold mb-1">WhatsApp Notification</p>
-                <p className="text-sm text-gray-300">
-                  The lawyer will be notified via WhatsApp. You'll receive confirmation shortly.
-                </p>
-              </div>
-            </div>
-          </div>
-
-          <div className="flex flex-col sm:flex-row gap-4">
-            <button
-              onClick={() => onNavigate("dashboard")}
-              className="flex-1 bg-gold hover:bg-gold-500 text-navy px-6 py-3 rounded-lg font-bold transition-all hover:shadow-lg hover:shadow-gold/20"
-            >
-              View My Bookings
-            </button>
-            <button
-              onClick={() => onNavigate("home")}
-              className="flex-1 border border-gold text-gold px-6 py-3 rounded-lg font-bold hover:bg-gold/10 transition-colors"
-            >
-              Back to Home
-            </button>
+          {/* Cost Row */}
+          <div className="px-6 py-5 border-t border-white/[0.04] flex items-center justify-between">
+            <span className="text-sm text-[#dce1fb]/40">Session Fee</span>
+            <span className="text-[#C9A84C] font-bold text-xl font-serif">₹{lawyer.cost}</span>
           </div>
         </div>
 
-        <div className="text-center text-gray-400 text-sm">
-          <p>Booking ID: BK{Date.now().toString().slice(-6)}</p>
+        {/* Email Notification Banner */}
+        <div className="flex items-start gap-3 bg-[#151b2d] rounded-xl px-5 py-4 mb-6 border border-white/[0.04]">
+          <Mail className="w-4 h-4 text-[#C9A84C]/70 flex-shrink-0 mt-0.5" />
+          <div>
+            <p className="text-sm text-white font-medium mb-0.5">Email Notification Sent</p>
+            <p className="text-xs text-[#dce1fb]/40 leading-relaxed">
+              The lawyer has been notified via email. You'll receive a confirmation once they respond.
+            </p>
+          </div>
+        </div>
+
+        {/* Booking ID */}
+        <p className="text-center text-[10px] uppercase tracking-widest text-[#dce1fb]/25 mb-6">
+          Booking Ref: {BookingId}
+        </p>
+
+        {/* CTAs */}
+        <div className="flex flex-col sm:flex-row gap-3">
+          <button
+            onClick={() => onNavigate("dashboard")}
+            className="flex-1 bg-[#C9A84C] hover:bg-[#e6c364] text-[#241a00] px-6 py-3 rounded-xl font-bold text-sm transition-all duration-200 hover:-translate-y-0.5 flex items-center justify-center gap-2"
+          >
+            View My Bookings
+            <ArrowRight className="w-4 h-4" />
+          </button>
+          <button
+            onClick={() => onNavigate("home")}
+            className="flex-1 bg-[#151b2d] hover:bg-[#1a2235] text-[#dce1fb]/70 hover:text-[#dce1fb] px-6 py-3 rounded-xl font-medium text-sm transition-all duration-200"
+          >
+            Back to Home
+          </button>
         </div>
       </div>
     </div>

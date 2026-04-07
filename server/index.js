@@ -26,6 +26,7 @@ app.use((req, res, next) => {
 const lawyerRoutes = require('./routes/lawyerRoutes');
 const bookingRoutes = require('./routes/bookingRoutes');
 const reviewRoutes = require('./routes/reviewRoutes');
+const userRoutes = require('./routes/userRoutes');
 
 app.get('/', (req, res) => {
   res.send('Server running on port 5000');
@@ -35,6 +36,7 @@ app.get('/', (req, res) => {
 app.use('/api/lawyers', lawyerRoutes);
 app.use('/api/bookings', bookingRoutes);
 app.use('/api/reviews', reviewRoutes);
+app.use('/api/users', userRoutes);
 
 const PORT = process.env.PORT || 5000;
 

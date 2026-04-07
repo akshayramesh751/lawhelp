@@ -21,25 +21,16 @@ export default function LawyerCard({
       .join("");
   };
 
-  const colors = [
-    "bg-blue-600",
-    "bg-green-600",
-    "bg-purple-600",
-    "bg-red-600",
-    "bg-yellow-600",
-  ];
-  const colorIndex = lawyer.id % colors.length;
-
   return (
-    <div className="bg-navy-50 rounded-2xl p-6 border border-gray-800 hover:border-gold/30 hover:shadow-xl hover:shadow-gold/10 transition-all duration-300 hover:-translate-y-1 slide-up">
+    <div className="bg-[#0B1120]/60 backdrop-blur-md rounded-2xl p-6 border border-gray-800/60 hover:border-gold/50 shadow-premium hover:shadow-glow transition-all duration-500 transform hover:-translate-y-2 slide-up group">
       <div className="flex items-start gap-4 mb-4">
         <div
-          className={`${colors[colorIndex]} w-16 h-16 rounded-full flex items-center justify-center text-white font-bold text-lg flex-shrink-0`}
+          className="w-16 h-16 rounded-full flex items-center justify-center text-gold bg-gold/10 border border-gold/20 font-bold text-lg flex-shrink-0 group-hover:scale-110 transition-transform duration-500 shadow-[0_0_10px_rgba(212,175,55,0.1)]"
         >
           {getInitials(lawyer.name)}
         </div>
         <div className="flex-1 min-w-0">
-          <h3 className="text-xl font-serif font-bold text-white mb-1">
+          <h3 className="text-xl font-serif font-bold text-white mb-1 group-hover:text-gold transition-colors duration-300">
             {lawyer.name}
           </h3>
           <div className="flex flex-wrap gap-2 mb-2">
@@ -82,13 +73,13 @@ export default function LawyerCard({
         <div className="flex gap-2">
           <button
             onClick={() => onViewProfile(lawyer.id)}
-            className="px-4 py-2 border border-gold text-gold rounded-lg hover:bg-gold/10 transition-colors"
+            className="px-4 py-2 border border-gold text-gold rounded-xl hover:bg-gold/10 hover:shadow-[0_0_15px_rgba(212,175,55,0.2)] transition-all duration-300"
           >
             View Profile
           </button>
           <button
             onClick={() => onBookNow(lawyer.id)}
-            className="px-4 py-2 bg-gold text-navy rounded-lg hover:bg-gold-500 transition-colors font-semibold"
+            className="px-4 py-2 bg-gold text-navy rounded-xl hover:bg-gold-400 hover:-translate-y-0.5 hover:shadow-[0_0_15px_rgba(212,175,55,0.4)] transition-all duration-300 font-bold"
           >
             Book Now
           </button>

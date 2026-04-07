@@ -1,36 +1,63 @@
+const { v4: uuidv4 } = require('uuid');
 const Booking = require('../models/Booking');
 const User = require('../models/User');
 const Lawyer = require('../models/Lawyer');
-const { sendWhatsAppMessage } = require('../utils/twilio');
+const { sendEmail } = require('../utils/email');
 
 const createBooking = async (req, res) => {
   try {
-    const { userId, lawyerId, date, timeSlot, cost } = req.body;
+    const { lawyerId, date, timeSlot, cost } = req.body;
     
+    // Get the real logged-in user from the database using Firebase UID
+    const user = await User.findOne({ firebaseUid: req.user.uid });
+    if (!user) {
+      return res.status(404).json({ message: "User profile not found in database. Please log in again." });
+    }
+    
+    const approveToken = uuidv4();
+    const rejectToken = uuidv4();
+
     const booking = new Booking({
-      userId,
+      userId: user._id,
       lawyerId,
       date,
       timeSlot,
       cost,
-      status: 'pending'
+      status: 'pending',
+      approveToken,
+      rejectToken
     });
     
     const newBooking = await booking.save();
 
-    // Fetch User and Lawyer to get their names and phone numbers
-    let user = await User.findById(userId);
-    if (!user) {
-      user = { name: "Test User", phone: "+919902746555" };
-    }
     const lawyer = await Lawyer.findById(lawyerId);
 
-    if (user && lawyer && lawyer.phone) {
+    if (lawyer && lawyer.email) {
       const formattedDate = new Date(date).toLocaleDateString();
-      const message = `*⚖️ NyayaConnect Consultation Request*\n\n*Client:* ${user.name}\n*Date:* ${formattedDate}\n*Time Slot:* ${timeSlot}\n*Session Fee:* ₹${cost}\n\nPlease reply with *CONFIRM* to accept this booking, or *REJECT* to decline.`;
-      
-      // Send alert to Lawyer's phone
-      await sendWhatsAppMessage(lawyer.phone, message);
+      const baseUrl = process.env.BASE_URL || 'http://localhost:5000';
+      const approveLink = `${baseUrl}/api/bookings/approve?token=${approveToken}`;
+      const rejectLink = `${baseUrl}/api/bookings/reject?token=${rejectToken}`;
+
+      const subject = `New Consultation Request from ${user.name}`;
+      const htmlContent = `
+        <h2>⚖️ NyayaConnect Consultation Request</h2>
+        <p><strong>Client:</strong> ${user.name}</p>
+        <p><strong>Date:</strong> ${formattedDate}</p>
+        <p><strong>Time Slot:</strong> ${timeSlot}</p>
+        <p><strong>Session Fee:</strong> ₹${cost}</p>
+        <br/>
+        <p>Please approve or reject this request by clicking one of the links below:</p>
+        <a href="${approveLink}" style="padding:10px 15px; background-color:green; color:white; text-decoration:none; border-radius:5px;">Approve Booking</a>
+        &nbsp;&nbsp;
+        <a href="${rejectLink}" style="padding:10px 15px; background-color:red; color:white; text-decoration:none; border-radius:5px;">Reject Booking</a>
+        <br/><br/>
+        <p><em>These links will expire if already used.</em></p>
+      `;
+
+      // Send alert to Lawyer's email
+      await sendEmail(lawyer.email, subject, htmlContent);
+    } else {
+      console.warn(`Lawyer ${lawyer ? lawyer.name : lawyerId} does not have an email set. Skipping email notification.`);
     }
 
     res.status(201).json(newBooking);
@@ -39,75 +66,14 @@ const createBooking = async (req, res) => {
   }
 };
 
-// Handle Incoming WhatsApp replies from Twilio
-const handleTwilioWebhook = async (req, res) => {
-  try {
-    const incomingMsg = req.body.Body ? req.body.Body.trim().toUpperCase() : '';
-    // Twilio `req.body.From` looks like 'whatsapp:+919902746555'
-    const fromNumber = req.body.From ? req.body.From.replace('whatsapp:', '') : '';
-
-    console.log(`[TWILIO WEBHOOK] Received reply: ${incomingMsg} from ${fromNumber}`);
-
-    let responseMessage = `Your response "${incomingMsg}" was logged successfully.`;
-    const newStatus = incomingMsg === 'CONFIRM' ? 'confirmed' : incomingMsg === 'REJECT' ? 'rejected' : null;
-
-    if (newStatus) {
-      // Find the lawyer with this phone number
-      const lawyer = await Lawyer.findOne({ phone: fromNumber });
-      
-      if (lawyer) {
-        // Find most recent pending booking for this lawyer
-        const booking = await Booking.findOne({ 
-          lawyerId: lawyer._id, 
-          status: 'pending' 
-        }).sort({ createdAt: -1 }).populate('userId');
-
-        if (booking) {
-          booking.status = newStatus;
-          await booking.save();
-          
-          responseMessage = `Successfully ${newStatus} the booking for ${booking.userId ? booking.userId.name : 'client'}.`;
-
-          // Notify the client about the status change
-          if (booking.userId && booking.userId.phone) {
-            const formattedDate = new Date(booking.date).toLocaleDateString();
-            let userMessage = '';
-            
-            if (newStatus === 'confirmed') {
-              userMessage = `✅ Your booking with ${lawyer.name} on ${formattedDate} at ${booking.timeSlot} is confirmed.`;
-            } else if (newStatus === 'rejected') {
-              userMessage = `❌ Your booking with ${lawyer.name} was not accepted. Please try booking another lawyer.`;
-            }
-
-            if (userMessage) {
-              await sendWhatsAppMessage(booking.userId.phone, userMessage);
-            }
-          }
-        } else {
-          responseMessage = `No pending bookings found to process.`;
-        }
-      } else {
-        responseMessage = `We couldn't find a Lawyer profile matching your phone number.`;
-      }
-    } else {
-      responseMessage = `Invalid command. Please reply CONFIRM or REJECT.`;
-    }
-
-    // Respond to Twilio so it stops retrying and optionally sends a message to the lawyer confirming success
-    res.set('Content-Type', 'text/xml');
-    res.send(`<Response><Message>${responseMessage}</Message></Response>`);
-  } catch (error) {
-    console.error('Webhook Error:', error);
-    res.status(500).send('Error handling response');
-  }
-};
-
 const getUserBookings = async (req, res) => {
   try {
-    const { userId } = req.query;
-    if (!userId) return res.status(400).json({ message: 'userId is required' });
+    const user = await User.findOne({ firebaseUid: req.user.uid });
+    if (!user) {
+      return res.json([]); 
+    }
     
-    const bookings = await Booking.find({ userId }).populate('lawyerId', 'name city specializations cost phone');
+    const bookings = await Booking.find({ userId: user._id }).populate('lawyerId', 'name city specializations cost email');
     res.json(bookings);
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -121,7 +87,6 @@ const updateBookingStatus = async (req, res) => {
       return res.status(400).json({ message: 'Invalid status' });
     }
     
-    // We populate lawyerId and userId so we can access their names and phone numbers
     const booking = await Booking.findByIdAndUpdate(
       req.params.id,
       { status },
@@ -130,20 +95,19 @@ const updateBookingStatus = async (req, res) => {
     
     if (!booking) return res.status(404).json({ message: 'Booking not found' });
     
-    // Trigger Twilio WhatsApp for status updates
-    if (booking.userId && booking.userId.phone) {
-      let message = '';
+    if (booking.userId && booking.userId.email) {
       const formattedDate = new Date(booking.date).toLocaleDateString();
+      let subject = `Booking Update - ${booking.lawyerId.name}`;
+      let htmlContent = '';
       
       if (status === 'confirmed') {
-        message = `✅ Your booking with ${booking.lawyerId.name} on ${formattedDate} at ${booking.timeSlot} is confirmed.`;
+        htmlContent = `<p>✅ Your booking with ${booking.lawyerId.name} on ${formattedDate} at ${booking.timeSlot} is confirmed.</p>`;
       } else if (status === 'rejected') {
-        message = `❌ Your booking with ${booking.lawyerId.name} was not accepted. Please try booking another lawyer.`;
+        htmlContent = `<p>❌ Your booking with ${booking.lawyerId.name} was not accepted. Please try booking another lawyer.</p>`;
       }
 
-      if (message) {
-        // Send alert to User's phone
-        await sendWhatsAppMessage(booking.userId.phone, message);
+      if (htmlContent) {
+        await sendEmail(booking.userId.email, subject, htmlContent);
       }
     }
 
@@ -153,4 +117,62 @@ const updateBookingStatus = async (req, res) => {
   }
 };
 
-module.exports = { createBooking, getUserBookings, updateBookingStatus, handleTwilioWebhook };
+const approveBooking = async (req, res) => {
+  try {
+    const { token } = req.query;
+    if (!token) return res.status(400).send('Token missing.');
+
+    const booking = await Booking.findOne({ approveToken: token }).populate('userId').populate('lawyerId');
+    if (!booking) return res.status(404).send('Invalid or expired token.');
+    if (booking.tokensUsed) return res.status(400).send('This booking action has already been processed.');
+
+    booking.status = 'confirmed';
+    booking.tokensUsed = true;
+    await booking.save();
+
+    // Notify client
+    if (booking.userId && booking.userId.email) {
+      const formattedDate = new Date(booking.date).toLocaleDateString();
+      await sendEmail(
+        booking.userId.email, 
+        `Booking Confirmed - ${booking.lawyerId.name}`, 
+        `<p>✅ Your booking with ${booking.lawyerId.name} on ${formattedDate} at ${booking.timeSlot} is confirmed.</p>`
+      );
+    }
+
+    res.send('<h1>✅ Booking Approved Successfully</h1><p>The client has been notified.</p>');
+  } catch (error) {
+    res.status(500).send('An error occurred.');
+  }
+};
+
+const rejectBooking = async (req, res) => {
+  try {
+    const { token } = req.query;
+    if (!token) return res.status(400).send('Token missing.');
+
+    const booking = await Booking.findOne({ rejectToken: token }).populate('userId').populate('lawyerId');
+    if (!booking) return res.status(404).send('Invalid or expired token.');
+    if (booking.tokensUsed) return res.status(400).send('This booking action has already been processed.');
+
+    booking.status = 'rejected';
+    booking.tokensUsed = true;
+    await booking.save();
+
+    // Notify client
+    if (booking.userId && booking.userId.email) {
+      const formattedDate = new Date(booking.date).toLocaleDateString();
+      await sendEmail(
+        booking.userId.email, 
+        `Booking Rejected - ${booking.lawyerId.name}`, 
+        `<p>❌ Your booking with ${booking.lawyerId.name} on ${formattedDate} at ${booking.timeSlot} was not accepted. Please try booking another lawyer.</p>`
+      );
+    }
+
+    res.send('<h1>❌ Booking Rejected</h1><p>The client has been notified to pick another lawyer.</p>');
+  } catch (error) {
+    res.status(500).send('An error occurred.');
+  }
+};
+
+module.exports = { createBooking, getUserBookings, updateBookingStatus, approveBooking, rejectBooking };

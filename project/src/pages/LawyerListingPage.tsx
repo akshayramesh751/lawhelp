@@ -107,79 +107,78 @@ export default function LawyerListingPage({
         )}
 
         <div className="flex flex-col lg:flex-row gap-6">
-          <aside
-            className={`${showFilters ? "block" : "hidden"} lg:block w-full lg:w-80 flex-shrink-0`}
-          >
-            <div className="bg-navy-50 rounded-2xl p-6 border border-gray-800 sticky top-24">
-              <div className="flex items-center justify-between mb-6">
-                <h2 className="text-xl font-serif font-bold text-gold flex items-center gap-2">
-                  <SlidersHorizontal className="w-5 h-5" />
-                  Filters
-                </h2>
+          {/* Filter Sidebar */}
+          <aside className={`${showFilters ? "block" : "hidden"} lg:block w-full lg:w-72 flex-shrink-0`}>
+            <div className="bg-[#151b2d] rounded-2xl p-6 sticky top-24">
+
+              {/* Header */}
+              <div className="flex items-center justify-between mb-7">
+                <div className="flex items-center gap-2.5">
+                  <SlidersHorizontal className="w-4 h-4 text-[#C9A84C]" />
+                  <h2 className="font-serif text-white text-base font-semibold tracking-wide">Refine Search</h2>
+                </div>
                 <button
-                  onClick={() =>
-                    setShowFilters(!showFilters)
-                  }
-                  className="lg:hidden text-gray-400 hover:text-gold"
+                  onClick={() => setShowFilters(!showFilters)}
+                  className="lg:hidden text-xs text-[#C9A84C]/60 hover:text-[#C9A84C] transition-colors"
                 >
                   Close
                 </button>
               </div>
 
-              <div className="space-y-6">
+              <div className="space-y-7">
+                {/* Price Range */}
                 <div>
-                  <label className="block text-sm font-semibold text-gray-300 mb-3">
-                    Price Range
-                  </label>
-                  <div className="space-y-2">
-                    <input
-                      type="range"
-                      min="0"
-                      max="5000"
-                      step="100"
-                      value={priceRange[1]}
-                      onChange={(e) =>
-                        setPriceRange([priceRange[0], parseInt(e.target.value)])
-                      }
-                      className="w-full accent-gold"
-                    />
-                    <div className="flex justify-between text-sm text-gray-400">
-                      <span>₹{priceRange[0]}</span>
-                      <span>₹{priceRange[1]}</span>
-                    </div>
+                  <p className="text-[10px] uppercase tracking-[0.18em] text-[#C9A84C]/60 font-medium mb-3">Price Range</p>
+                  <input
+                    type="range"
+                    min="0"
+                    max="5000"
+                    step="100"
+                    value={priceRange[1]}
+                    onChange={(e) => setPriceRange([priceRange[0], parseInt(e.target.value)])}
+                    className="w-full accent-[#C9A84C] h-1 rounded-full bg-[#2e3447] appearance-none cursor-pointer"
+                  />
+                  <div className="flex justify-between mt-2">
+                    <span className="text-xs text-[#dce1fb]/50 bg-[#070d1f] px-2 py-0.5 rounded-md">₹{priceRange[0]}</span>
+                    <span className="text-xs text-[#C9A84C] bg-[#070d1f] px-2 py-0.5 rounded-md font-medium">up to ₹{priceRange[1]}</span>
                   </div>
                 </div>
 
+                {/* Divider */}
+                <div className="h-px bg-white/[0.06]"></div>
+
+                {/* City */}
                 <div>
-                  <label className="block text-sm font-semibold text-gray-300 mb-3">
-                    City
-                  </label>
-                  <select
-                    value={selectedCity}
-                    onChange={(e) => setSelectedCity(e.target.value)}
-                    className="w-full px-4 py-2 rounded-lg bg-navy border border-gray-700 text-gray-200 focus:outline-none focus:border-gold"
-                  >
-                    {cities.map((city) => (
-                      <option key={city} value={city}>
-                        {city}
-                      </option>
-                    ))}
-                  </select>
+                  <p className="text-[10px] uppercase tracking-[0.18em] text-[#C9A84C]/60 font-medium mb-3">Location</p>
+                  <div className="relative">
+                    <select
+                      value={selectedCity}
+                      onChange={(e) => setSelectedCity(e.target.value)}
+                      className="w-full px-3 py-2.5 bg-[#070d1f] text-[#dce1fb] text-sm rounded-xl border border-white/[0.08] focus:outline-none focus:border-[#C9A84C]/40 transition-colors appearance-none cursor-pointer"
+                    >
+                      {cities.map((city) => (
+                        <option key={city} value={city} className="bg-[#0c1324]">{city}</option>
+                      ))}
+                    </select>
+                    <div className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[#C9A84C]/50">▾</div>
+                  </div>
                 </div>
 
+                {/* Divider */}
+                <div className="h-px bg-white/[0.06]"></div>
+
+                {/* Rating */}
                 <div>
-                  <label className="block text-sm font-semibold text-gray-300 mb-3">
-                    Minimum Rating
-                  </label>
-                  <div className="flex gap-2">
+                  <p className="text-[10px] uppercase tracking-[0.18em] text-[#C9A84C]/60 font-medium mb-3">Minimum Rating</p>
+                  <div className="flex flex-wrap gap-2">
                     {[0, 3, 4, 4.5].map((rating) => (
                       <button
                         key={rating}
                         onClick={() => setMinRating(rating)}
-                        className={`px-3 py-1 rounded-lg text-sm transition-colors ${
+                        className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all duration-200 ${
                           minRating === rating
-                            ? "bg-gold text-navy font-semibold"
-                            : "bg-navy border border-gray-700 text-gray-300 hover:border-gold"
+                            ? "bg-[#C9A84C] text-[#241a00]"
+                            : "bg-[#070d1f] text-[#dce1fb]/60 hover:text-[#dce1fb] border border-white/[0.08]"
                         }`}
                       >
                         {rating === 0 ? "All" : `${rating}★+`}
@@ -188,30 +187,33 @@ export default function LawyerListingPage({
                   </div>
                 </div>
 
+                {/* Divider */}
+                <div className="h-px bg-white/[0.06]"></div>
+
+                {/* Specializations */}
                 <div>
-                  <label className="block text-sm font-semibold text-gray-300 mb-3">
-                    Specialization
-                  </label>
-                  <div className="space-y-2 max-h-64 overflow-y-auto">
+                  <p className="text-[10px] uppercase tracking-[0.18em] text-[#C9A84C]/60 font-medium mb-3">Practice Area</p>
+                  <div className="flex flex-wrap gap-2">
                     {allSpecializations.map((spec) => (
-                      <label
+                      <button
                         key={spec}
-                        className="flex items-center gap-2 cursor-pointer group"
+                        onClick={() => toggleSpecialization(spec)}
+                        className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-200 ${
+                          selectedSpecializations.includes(spec)
+                            ? "bg-[#C9A84C] text-[#241a00]"
+                            : "bg-[#2e3447] text-[#d0c5b2] hover:bg-[#33394c]"
+                        }`}
                       >
-                        <input
-                          type="checkbox"
-                          checked={selectedSpecializations.includes(spec)}
-                          onChange={() => toggleSpecialization(spec)}
-                          className="w-4 h-4 rounded accent-gold"
-                        />
-                        <span className="text-sm text-gray-300 group-hover:text-gold transition-colors">
-                          {spec}
-                        </span>
-                      </label>
+                        {spec}
+                      </button>
                     ))}
                   </div>
                 </div>
 
+                {/* Divider */}
+                <div className="h-px bg-white/[0.06]"></div>
+
+                {/* Clear */}
                 <button
                   onClick={() => {
                     setPriceRange([0, 5000]);
@@ -219,9 +221,9 @@ export default function LawyerListingPage({
                     setMinRating(0);
                     setSelectedSpecializations([]);
                   }}
-                  className="w-full px-4 py-2 border border-gold text-gold rounded-lg hover:bg-gold/10 transition-colors"
+                  className="text-xs text-[#C9A84C]/50 hover:text-[#C9A84C] transition-colors underline underline-offset-2 decoration-dotted"
                 >
-                  Clear All Filters
+                  Clear all filters
                 </button>
               </div>
             </div>

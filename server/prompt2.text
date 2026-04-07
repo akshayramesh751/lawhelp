@@ -1,0 +1,143 @@
+You are a backend engineer working on an existing lawyer booking system.
+
+### 🎯 Goal
+
+Replace the current WhatsApp (Twilio) notification system with an email-based workflow using Nodemailer, while keeping the existing database schema intact.
+
+---
+
+### ❗ Constraints (VERY IMPORTANT)
+
+* DO NOT modify or break the current database schema
+* Reuse existing booking and user/lawyer tables
+* Only add minimal fields if absolutely necessary
+* Maintain current booking lifecycle (PENDING → CONFIRMED / REJECTED)
+
+---
+
+### 📌 Step 1: Remove Twilio Integration
+
+* Remove all Twilio/WhatsApp-related code
+* Clean up any environment variables related to Twilio
+* Ensure no existing booking logic is affected
+
+---
+
+### 📌 Step 2: Email Setup using Nodemailer
+
+* Integrate Nodemailer using SMTP (Gmail or similar)
+* Create a reusable email utility function:
+
+  * sendEmail(to, subject, htmlContent)
+
+---
+
+### 📌 Step 3: Ensure Lawyer Email Exists
+
+* Before sending email:
+
+  * Check if the selected lawyer has an email field
+* If email field does NOT exist:
+
+  * Add a new field `email` to the lawyer/user model (minimal change)
+* If email exists but is empty:
+
+  * Handle gracefully (do not crash)
+
+---
+
+### 📌 Step 4: Booking Email Workflow
+
+When a booking is created:
+
+1. Generate two secure tokens:
+
+   * approve_token
+   * reject_token
+
+2. Store tokens (reuse existing tables if possible, else create a minimal new table like BookingActions with):
+
+   * booking_id
+   * token
+   * action_type (APPROVE / REJECT)
+   * expires_at
+   * used (boolean)
+
+3. Send email to lawyer with:
+
+   * Client problem description
+   * Preferred date
+   * Two buttons/links:
+
+Approve:
+<BASE_URL>/api/bookings/approve?token=APPROVE_TOKEN
+
+Reject:
+<BASE_URL>/api/bookings/reject?token=REJECT_TOKEN
+
+---
+
+### 📌 Step 5: API Endpoints
+
+Implement:
+
+#### GET /api/bookings/approve
+
+* Validate token (exists, not expired, not used)
+* Update booking status → CONFIRMED
+* Mark token as used
+* Invalidate reject token
+* Send confirmation email to user
+
+#### GET /api/bookings/reject
+
+* Same validation
+* Update booking status → REJECTED
+* Notify user via email
+
+---
+
+### 📌 Step 6: Base URL Handling
+
+* Use environment variable:
+  BASE_URL = public URL (e.g., ngrok or deployed backend)
+* Use this to construct email links
+
+---
+
+### 📌 Step 7: Error Handling
+
+* Invalid/expired token → return proper message
+* Already used token → prevent duplicate actions
+* Missing email → log warning, skip sending
+
+---
+
+### 📌 Step 8: Keep System Consistent
+
+* Email actions must update the same DB used by the web app
+* No duplicate booking logic
+* Dashboard (if exists) should reflect updated status automatically
+
+---
+
+### 📌 Step 9 (Optional but Recommended)
+
+* Add expiry logic (e.g., 24 hours)
+* Mark booking as EXPIRED if no response
+
+---
+
+### ✅ Expected Outcome
+
+* Twilio completely removed
+* Email-based approval system working
+* Lawyer receives email → clicks approve/reject
+* Booking status updates in DB
+* User receives confirmation email
+* System remains stable and production-like
+
+---
+
+Focus on clean, modular, production-quality backend code.
+Do not over-engineer. Keep it simple and robust.

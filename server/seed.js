@@ -136,6 +136,7 @@ const seedDB = async () => {
       education: lawyer.education,
       barRegNo: lawyer.barReg,
       phone: '+919902746555', 
+      email: process.env.EMAIL_USER || 'lawyer@example.com', // Set lawyer email to the developer's email so they can receive the test booking requests
       isVerified: true
     }));
 

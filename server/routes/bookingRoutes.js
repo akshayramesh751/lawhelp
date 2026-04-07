@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { createBooking, getUserBookings, updateBookingStatus, handleTwilioWebhook } = require('../controllers/bookingController');
+const { createBooking, getUserBookings, updateBookingStatus, approveBooking, rejectBooking } = require('../controllers/bookingController');
 const auth = require('../middleware/auth');
 
 // POST /api/bookings
@@ -11,7 +11,8 @@ router.get('/', auth, getUserBookings);
 
 router.patch('/:id/status', updateBookingStatus);
 
-// POST /api/bookings/webhook
-router.post('/webhook', handleTwilioWebhook);
+// Email Action Routes
+router.get('/approve', approveBooking);
+router.get('/reject', rejectBooking);
 
 module.exports = router;

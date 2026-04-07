@@ -1,5 +1,5 @@
 import { initializeApp } from "firebase/app";
-import { getAuth, GoogleAuthProvider, signInWithPopup, signOut } from "firebase/auth";
+import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, createUserWithEmailAndPassword, signInWithEmailAndPassword } from "firebase/auth";
 
 const firebaseConfig = {
   apiKey: "AIzaSyDdQib838T_ATkWRPvPJ36LJ11dpiK3e8c",
@@ -32,4 +32,14 @@ export const logout = async () => {
     console.error("Error signing out", error);
     throw error;
   }
+};
+
+export const signUpWithEmail = async (email: string, pass: string) => {
+  const result = await createUserWithEmailAndPassword(auth, email, pass);
+  return result.user;
+};
+
+export const loginWithEmail = async (email: string, pass: string) => {
+  const result = await signInWithEmailAndPassword(auth, email, pass);
+  return result.user;
 };

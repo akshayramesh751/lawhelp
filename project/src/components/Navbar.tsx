@@ -1,4 +1,4 @@
-import { Scale, LogOut, User as UserIcon } from "lucide-react";
+import { Scale, LogOut } from "lucide-react";
 import { User } from "firebase/auth";
 import { logout } from "../utils/firebase";
 
@@ -18,7 +18,7 @@ export default function Navbar({ onNavigate, user }: NavbarProps) {
   };
 
   return (
-    <nav className="fixed top-0 left-0 right-0 z-50 bg-navy-100 border-b border-gray-800 backdrop-blur-sm">
+    <nav className="fixed top-0 left-0 right-0 z-50 bg-[#020617]/40 border-b border-gray-800/30 backdrop-blur-2xl transition-all duration-300">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
           <button
@@ -57,8 +57,8 @@ export default function Navbar({ onNavigate, user }: NavbarProps) {
                   {user.photoURL ? (
                     <img src={user.photoURL} alt={user.displayName || "User"} className="w-8 h-8 rounded-full border border-gold/30" />
                   ) : (
-                    <div className="w-8 h-8 rounded-full bg-gray-700 flex items-center justify-center">
-                      <UserIcon className="w-4 h-4 text-gray-400" />
+                    <div className="w-8 h-8 rounded-full bg-gold/20 text-gold flex items-center justify-center font-bold border border-gold/30 shadow-sm">
+                      {user.displayName ? user.displayName.charAt(0).toUpperCase() : user.email?.charAt(0).toUpperCase() || '?'}
                     </div>
                   )}
                   <span className="hidden sm:inline font-medium">{user.displayName?.split(' ')[0]}</span>
