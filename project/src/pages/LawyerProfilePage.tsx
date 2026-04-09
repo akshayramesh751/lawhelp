@@ -16,15 +16,25 @@ export default function LawyerProfilePage({ lawyerId, onNavigate }: LawyerProfil
   const [lawyerReviews, setLawyerReviews] = useState<any[]>([]);
   const [activeTab, setActiveTab] = useState<"overview" | "reviews" | "availability">("overview");
   const [selectedSlot, setSelectedSlot] = useState<string | null>(null);
+  const [confirmedSlots, setConfirmedSlots] = useState<Set<string>>(new Set());
   const [isBooking, setIsBooking] = useState(false);
   const TEST_USER_ID = "670a7a4dd4bfb22221234567";
 
   useEffect(() => {
     const fetchLawyerData = async () => {
       try {
-        const { lawyer, reviews } = await getLawyerById(lawyerId);
+        const { lawyer, reviews, confirmedBookings } = await getLawyerById(lawyerId);
         setLawyer({ ...lawyer, id: lawyer._id, reviews: lawyer.totalReviews });
         setLawyerReviews(reviews || []);
+
+        if (confirmedBookings) {
+          const booked = new Set<string>();
+          confirmedBookings.forEach((b: any) => {
+            const dateStr = new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric" }).format(new Date(b.date));
+            booked.add(`${dateStr}-${b.timeSlot}`);
+          });
+          setConfirmedSlots(booked);
+        }
       } catch (error) {
         console.error("Failed to fetch lawyer details", error);
       }
@@ -35,9 +45,11 @@ export default function LawyerProfilePage({ lawyerId, onNavigate }: LawyerProfil
   const generateWeekSlots = () => {
     const generatedSlots = [];
     const currentDate = new Date();
+    currentDate.setDate(currentDate.getDate() + 1); // Start from tomorrow
+
     let daysAdded = 0;
-    while (daysAdded < 6) {
-      if (currentDate.getDay() !== 0) {
+    while (daysAdded < 7) {
+      if (currentDate.getDay() !== 0) { // Exclude Sunday
         const day = new Intl.DateTimeFormat("en-US", { weekday: "short" }).format(currentDate);
         const dateStr = new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric" }).format(currentDate);
         generatedSlots.push({ day, date: dateStr, slots: ["4:00 PM", "5:00 PM", "6:00 PM", "7:00 PM"] });
@@ -156,7 +168,7 @@ export default function LawyerProfilePage({ lawyerId, onNavigate }: LawyerProfil
                     <div className="grid sm:grid-cols-2 gap-4">
                       {[
                         { icon: GraduationCap, label: "Education", value: lawyer.education },
-                        { icon: Scale, label: "Bar Registration", value: lawyer.barReg },
+                        { icon: Scale, label: "Bar Registration", value: lawyer.barRegNo || "N/A" },
                         { icon: Award, label: "Win Rate", value: lawyer.winRate ? `${lawyer.winRate}%` : "N/A" },
                         { icon: Briefcase, label: "Cases Handled", value: lawyer.casesHandled ? `${lawyer.casesHandled}+` : "N/A" },
                       ].map(({ icon: Icon, label, value }) => (
@@ -201,7 +213,7 @@ export default function LawyerProfilePage({ lawyerId, onNavigate }: LawyerProfil
                 {/* Availability */}
                 {activeTab === "availability" && (
                   <div className="fade-in">
-                    <p className="text-[10px] uppercase tracking-widest text-[#C9A84C]/60 mb-5">Available Slots — Next 6 Days</p>
+                    <p className="text-[10px] uppercase tracking-widest text-[#C9A84C]/60 mb-5">Available Slots — Next 7 Days</p>
                     <div className="space-y-5">
                       {weekSlots.map((dayData) => (
                         <div key={dayData.day}>
@@ -212,18 +224,22 @@ export default function LawyerProfilePage({ lawyerId, onNavigate }: LawyerProfil
                           <div className="flex flex-wrap gap-2">
                             {dayData.slots.map((slot) => {
                               const slotId = `${dayData.date}-${slot}`;
+                              const isBooked = confirmedSlots.has(slotId);
                               return (
                                 <button
                                   key={slot}
-                                  onClick={() => setSelectedSlot(slotId)}
+                                  onClick={() => !isBooked && setSelectedSlot(slotId)}
+                                  disabled={isBooked}
                                   className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-medium transition-all duration-200 ${
-                                    selectedSlot === slotId
-                                      ? "bg-[#C9A84C] text-[#241a00]"
-                                      : "bg-[#151b2d] text-[#dce1fb]/50 hover:bg-[#1a2235] hover:text-[#dce1fb]"
+                                    isBooked 
+                                      ? "bg-[#C9A84C]/10 text-[#C9A84C]/30 cursor-not-allowed border border-[#C9A84C]/20 opacity-50"
+                                      : selectedSlot === slotId
+                                        ? "bg-[#C9A84C] text-[#241a00]"
+                                        : "bg-[#151b2d] text-[#dce1fb]/50 hover:bg-[#1a2235] hover:text-[#dce1fb]"
                                   }`}
                                 >
                                   <Clock className="w-3 h-3" />
-                                  {slot}
+                                  {isBooked ? "Booked" : slot}
                                 </button>
                               );
                             })}

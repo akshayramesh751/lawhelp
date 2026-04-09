@@ -13,6 +13,8 @@ const lawyerSchema = new mongoose.Schema({
   bio: { type: String },
   education: { type: String },
   barRegNo: { type: String },
+  winRate: { type: Number },
+  casesHandled: { type: Number },
   phone: { type: String }, // for WhatsApp notifications
   isVerified: { type: Boolean, default: false }
 }, { timestamps: true });

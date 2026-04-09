@@ -13,6 +13,23 @@ const createBooking = async (req, res) => {
     if (!user) {
       return res.status(404).json({ message: "User profile not found in database. Please log in again." });
     }
+
+    // Server-side lock: prevent creating a booking if slot is already confirmed
+    const startOfDay = new Date(date);
+    startOfDay.setUTCHours(0, 0, 0, 0);
+    const endOfDay = new Date(date);
+    endOfDay.setUTCHours(23, 59, 59, 999);
+
+    const existingConfirmed = await Booking.findOne({
+      lawyerId,
+      timeSlot,
+      status: 'confirmed',
+      date: { $gte: startOfDay, $lte: endOfDay }
+    });
+
+    if (existingConfirmed) {
+      return res.status(400).json({ message: "This slot is already officially booked and confirmed!" });
+    }
     
     const approveToken = uuidv4();
     const rejectToken = uuidv4();
@@ -103,7 +120,7 @@ const updateBookingStatus = async (req, res) => {
       if (status === 'confirmed') {
         htmlContent = `<p>✅ Your booking with ${booking.lawyerId.name} on ${formattedDate} at ${booking.timeSlot} is confirmed.</p>`;
       } else if (status === 'rejected') {
-        htmlContent = `<p>❌ Your booking with ${booking.lawyerId.name} was not accepted. Please try booking another lawyer.</p>`;
+        htmlContent = `<p>❌ The lawyer ${booking.lawyerId.name} is currently busy at ${booking.timeSlot} on ${formattedDate}. Please try booking for another day and time.</p>`;
       }
 
       if (htmlContent) {
@@ -125,6 +142,27 @@ const approveBooking = async (req, res) => {
     const booking = await Booking.findOne({ approveToken: token }).populate('userId').populate('lawyerId');
     if (!booking) return res.status(404).send('Invalid or expired token.');
     if (booking.tokensUsed) return res.status(400).send('This booking action has already been processed.');
+
+    // Check if another parallel request already got confirmed for this slot
+    const startOfDay = new Date(booking.date);
+    startOfDay.setUTCHours(0, 0, 0, 0);
+    const endOfDay = new Date(booking.date);
+    endOfDay.setUTCHours(23, 59, 59, 999);
+
+    const checkConflict = await Booking.findOne({
+      lawyerId: booking.lawyerId._id,
+      timeSlot: booking.timeSlot,
+      status: 'confirmed',
+      date: { $gte: startOfDay, $lte: endOfDay }
+    });
+
+    if (checkConflict) {
+      // Mark this one as rejected automatically because slot was taken
+      booking.status = 'rejected';
+      booking.tokensUsed = true;
+      await booking.save();
+      return res.status(400).send('<h1>Slot Already Booked!</h1><p>You have already confirmed another client for this exact slot. This request was automatically rejected.</p>');
+    }
 
     booking.status = 'confirmed';
     booking.tokensUsed = true;
@@ -164,12 +202,12 @@ const rejectBooking = async (req, res) => {
       const formattedDate = new Date(booking.date).toLocaleDateString();
       await sendEmail(
         booking.userId.email, 
-        `Booking Rejected - ${booking.lawyerId.name}`, 
-        `<p>❌ Your booking with ${booking.lawyerId.name} on ${formattedDate} at ${booking.timeSlot} was not accepted. Please try booking another lawyer.</p>`
+        `Booking Failed - Session Unavailable with ${booking.lawyerId.name}`, 
+        `<p>❌ The lawyer ${booking.lawyerId.name} is currently busy at ${booking.timeSlot} on ${formattedDate}. Please try booking for another day and time.</p>`
       );
     }
 
-    res.send('<h1>❌ Booking Rejected</h1><p>The client has been notified to pick another lawyer.</p>');
+    res.send('<h1>❌ Booking Rejected</h1><p>The client has been notified to pick another day and time.</p>');
   } catch (error) {
     res.status(500).send('An error occurred.');
   }

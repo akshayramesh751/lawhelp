@@ -1,5 +1,6 @@
 const Lawyer = require('../models/Lawyer');
 const Review = require('../models/Review');
+const Booking = require('../models/Booking');
 
 const getLawyers = async (req, res) => {
   try {
@@ -25,7 +26,12 @@ const getLawyerById = async (req, res) => {
     
     const reviews = await Review.find({ lawyerId: req.params.id }).populate('userId', 'name');
     
-    res.json({ lawyer, reviews });
+    const confirmedBookings = await Booking.find({ 
+       lawyerId: req.params.id, 
+       status: 'confirmed' 
+    }).select('date timeSlot');
+    
+    res.json({ lawyer, reviews, confirmedBookings });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }

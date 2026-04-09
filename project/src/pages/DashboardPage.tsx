@@ -86,7 +86,7 @@ export default function DashboardPage({ onNavigate }: DashboardPageProps) {
   const statusConfig: Record<string, { label: string; icon: any; bg: string; text: string; dot: string }> = {
     pending: { label: "Pending", icon: Clock, bg: "bg-amber-500/10", text: "text-amber-400", dot: "bg-amber-400" },
     confirmed: { label: "Confirmed", icon: CheckCircle2, bg: "bg-emerald-500/10", text: "text-emerald-400", dot: "bg-emerald-400" },
-    rejected: { label: "Rejected", icon: XCircle, bg: "bg-red-500/10", text: "text-red-400", dot: "bg-red-400" },
+    rejected: { label: "Failed", icon: XCircle, bg: "bg-red-500/10", text: "text-red-400", dot: "bg-red-400" },
     completed: { label: "Completed", icon: CheckCircle2, bg: "bg-[#C9A84C]/10", text: "text-[#C9A84C]", dot: "bg-[#C9A84C]" },
   };
 

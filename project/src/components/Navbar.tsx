@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Scale, LogOut } from "lucide-react";
 import { User } from "firebase/auth";
 import { logout } from "../utils/firebase";
@@ -8,6 +9,8 @@ interface NavbarProps {
 }
 
 export default function Navbar({ onNavigate, user }: NavbarProps) {
+  const [imgError, setImgError] = useState(false);
+
   const handleLogout = async () => {
     try {
       await logout();
@@ -54,8 +57,13 @@ export default function Navbar({ onNavigate, user }: NavbarProps) {
                   onClick={() => onNavigate("dashboard")}
                   className="flex items-center gap-2 text-gray-300 hover:text-gold transition-colors"
                 >
-                  {user.photoURL ? (
-                    <img src={user.photoURL} alt={user.displayName || "User"} className="w-8 h-8 rounded-full border border-gold/30" />
+                  {user.photoURL && !user.photoURL.includes('default-user') && !imgError ? (
+                    <img 
+                      src={user.photoURL} 
+                      alt={user.displayName || "User"} 
+                      className="w-8 h-8 rounded-full border border-gold/30" 
+                      onError={() => setImgError(true)}
+                    />
                   ) : (
                     <div className="w-8 h-8 rounded-full bg-gold/20 text-gold flex items-center justify-center font-bold border border-gold/30 shadow-sm">
                       {user.displayName ? user.displayName.charAt(0).toUpperCase() : user.email?.charAt(0).toUpperCase() || '?'}

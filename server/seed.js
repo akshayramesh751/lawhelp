@@ -135,6 +135,8 @@ const seedDB = async () => {
       bio: lawyer.bio,
       education: lawyer.education,
       barRegNo: lawyer.barReg,
+      casesHandled: Math.floor(Math.random() * 500) + 100,
+      winRate: Math.floor(Math.random() * 15) + 85,
       phone: '+919902746555', 
       email: process.env.EMAIL_USER || 'lawyer@example.com', // Set lawyer email to the developer's email so they can receive the test booking requests
       isVerified: true
