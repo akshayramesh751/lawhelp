@@ -216,7 +216,7 @@ export default function LawyerProfilePage({ lawyerId, onNavigate }: LawyerProfil
                     <p className="text-[10px] uppercase tracking-widest text-[#C9A84C]/60 mb-5">Available Slots — Next 7 Days</p>
                     <div className="space-y-5">
                       {weekSlots.map((dayData) => (
-                        <div key={dayData.day}>
+                        <div key={dayData.date}>
                           <p className="text-xs font-medium text-[#dce1fb]/40 mb-2.5 flex items-center gap-2">
                             <Calendar className="w-3.5 h-3.5 text-[#C9A84C]/50" />
                             {dayData.day}, {dayData.date}
