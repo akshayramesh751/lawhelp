@@ -6,10 +6,11 @@ The primary goal of **NyayaConnect** is to democratize access to legal assistanc
 ---
 
 ## 🛠️ System Overview
-NyayaConnect is engineered as a modern, decoupled full-stack web application. It operates using a Client-Server architecture, broken down into two main workspaces:
+NyayaConnect is engineered as a modern, decoupled full-stack web application. It operates using a Microservices architecture, broken down into three main workspaces:
 
 - **`/project` (Frontend Client)**: A React-based Single Page Application (SPA) providing the user interface, styled with the stunning "Midnight Gilded" UI design system. It focuses on performance, accessibility, modern aesthetics, and dynamic data rendering.
-- **`/server` (Backend Node API)**: An Express.js REST application operating alongside a MongoDB NoSQL database to persistently store user, lawyer, and booking data safely.
+- **`/server` (Backend Node API)**: An Express.js REST application operating alongside a MongoDB NoSQL database to persistently store user, lawyer, and booking data safely. It also handles initial document ingestion.
+- **`/ai-service` (AI Document Microservice)**: A scalable Python/FastAPI backend dedicated solely to heavy NLP workloads. It handles Multi-language translation, India-specific PII anonymization, and advanced text normalization without blocking the main Node.js event loop.
 
 ---
 
@@ -31,6 +32,13 @@ We have successfully established the foundational end-to-end workflows of the pl
 - **Core RESTful API**: Bulletproof CRUD operations for directory fetching, creating bookings, and user management.
 - **Email Notifications**: Email transporter logic (`utils/email.js`) configured for booking status updates and basic notifications.
 - **Firebase Admin Integration**: Integrated backend administration (`utils/firebaseAdmin.js`) potentially for auth verification or managed data tracking.
+
+### AI Document Processing Pipeline (`/ai-service` & `/server`)
+- **Hybrid Extraction Engine**: Node.js extraction pipeline utilizing `pdf-parse` for digital PDFs and `tesseract.js` for scanned images.
+- **Microservice Architecture**: Python FastAPI implementation totally decoupled from Node.js to ensure non-blocking, highly scalable NLP operations.
+- **Privacy & Anonymization Engine**: Built using Microsoft Presidio combined with Custom India-Specific Regex (Aadhaar, PAN, Cheque). Masks sensitive PII while generating secure legal placeholders (`[PARTY_NAME]`, `[CHEQUE_REDACTED]`).
+- **Indic Language Translation**: Lightweight, chunk-based Google Translate integration (`deep-translator`) with resilient fallback handling, auto language detection, and strict Unicode Normalization (NFKC) to prevent OCR hallucination on languages like Kannada.
+- **Domain-Specific Post-Editing**: Pre-translation Anchor word mapping and post-translation Regex overrides (fixing hallucinated legal roles like "Finance Minister" to "Owner") to guarantee precise English context.
 
 ---
 
@@ -82,9 +90,17 @@ To transition NyayaConnect from a fully-functional MVP to a highly scalable, pro
 
 ## 💻 Running the Current System Locally
 
-You will need two terminal windows running concurrently:
+You will need three terminal windows running concurrently:
 
-**Terminal 1 (Backend):**
+**Terminal 1 (AI Microservice):**
+```bash
+cd ai-service
+# Activate your virtual environment (venv\Scripts\activate or source venv/bin/activate)
+pip install -r requirements.txt
+uvicorn main:app --reload --port 8000
+```
+
+**Terminal 2 (Backend API):**
 ```bash
 cd server
 npm install
@@ -92,13 +108,14 @@ npm install
 node index.js # or npm run dev
 ```
 
-**Terminal 2 (Frontend):**
+**Terminal 3 (Frontend Client):**
 ```bash
 cd project
 npm install
 npm run dev
 ```
-**Another terminal for ngrok for testing**
+
+*(Optional) Terminal 4 for Webhook/API Testing via ngrok:*
 ```bash
 cd server
 ngrok http 5000
