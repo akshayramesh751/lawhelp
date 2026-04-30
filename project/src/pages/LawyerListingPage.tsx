@@ -60,9 +60,8 @@ export default function LawyerListingPage({
     if (searchQuery) {
       const category = classifyIssue(searchQuery);
       setDetectedCategory(category);
-      if (category) {
-        setSelectedSpecializations([category]);
-      }
+    } else {
+      setDetectedCategory(null);
     }
   }, [searchQuery]);
 
@@ -77,7 +76,18 @@ export default function LawyerListingPage({
 
         const data = await getLawyers(filters);
         const formattedData = data.map((l: any) => ({ ...l, id: l._id, reviews: l.totalReviews }));
-        const matched = formattedData.filter((lawyer: Lawyer) => lawyer.cost >= priceRange[0]);
+        let matched = formattedData.filter((lawyer: Lawyer) => lawyer.cost >= priceRange[0]);
+
+        if (detectedCategory && selectedSpecializations.length === 0) {
+          matched.sort((a: Lawyer, b: Lawyer) => {
+            const aMatch = a.specializations.includes(detectedCategory);
+            const bMatch = b.specializations.includes(detectedCategory);
+            if (aMatch && !bMatch) return -1;
+            if (!aMatch && bMatch) return 1;
+            return 0;
+          });
+        }
+
         setFilteredLawyers(matched);
       } catch (error) {
         console.error("Failed to fetch lawyers", error);
@@ -85,7 +95,7 @@ export default function LawyerListingPage({
     };
 
     fetchLawyers();
-  }, [priceRange, selectedCity, minRating, selectedSpecializations]);
+  }, [priceRange, selectedCity, minRating, selectedSpecializations, detectedCategory]);
 
   const toggleSpecialization = (spec: string) => {
     setSelectedSpecializations((prev) =>

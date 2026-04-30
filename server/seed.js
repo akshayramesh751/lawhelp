@@ -108,6 +108,97 @@ const mockLawyers = [
     bio: "Veteran labour lawyer with 20+ years handling complex employment and service law matters. Renowned for representing government employees and handling service-related disputes.",
     education: "LLB - ILS Law College",
     barReg: "MH/2004/00391"
+  },
+  {
+    name: "Adv. Karan Singh",
+    specializations: ["Corporate Law", "Intellectual Property"],
+    city: "Bangalore",
+    experience: 14,
+    rating: 4.8,
+    reviews: 145,
+    cost: 2200,
+    languages: ["English", "Hindi", "Kannada"],
+    bio: "Expert in corporate restructuring, mergers & acquisitions, and IP rights protection. Dedicated to helping startups and established businesses with their legal needs.",
+    education: "LLB - NLS Bangalore",
+    barReg: "KA/2010/01234"
+  },
+  {
+    name: "Adv. Anjali Desai",
+    specializations: ["Consumer Law", "Civil Litigation"],
+    city: "Ahmedabad",
+    experience: 5,
+    rating: 4.2,
+    reviews: 22,
+    cost: 500,
+    languages: ["Gujarati", "Hindi", "English"],
+    bio: "Focused on consumer protection cases and civil litigation. Providing accessible legal guidance to ordinary citizens fighting against corporate neglect.",
+    education: "LLB - Gujarat University",
+    barReg: "GJ/2019/08192"
+  },
+  {
+    name: "Adv. Rohit Verma",
+    specializations: ["Criminal Law", "Cyber Law"],
+    city: "Delhi",
+    experience: 11,
+    rating: 4.6,
+    reviews: 80,
+    cost: 1500,
+    languages: ["Hindi", "English"],
+    bio: "Specializing in cybercrimes, data privacy, and electronic evidence, mixed with profound knowledge of traditional criminal defense.",
+    education: "LLM - NLU Delhi",
+    barReg: "DL/2013/09423"
+  },
+  {
+    name: "Adv. Neha Choudhary",
+    specializations: ["Family Law", "Property Law"],
+    city: "Kolkata",
+    experience: 18,
+    rating: 4.9,
+    reviews: 198,
+    cost: 1800,
+    languages: ["Bengali", "English", "Hindi"],
+    bio: "Highly respected in family dispute resolutions and ancestral property claims. Known to advocate strongly for women's rights in property succession.",
+    education: "LLB - Calcutta University",
+    barReg: "WB/2006/07331"
+  },
+  {
+    name: "Adv. Manish Agarwal",
+    specializations: ["Tax Law", "Corporate Law"],
+    city: "Mumbai",
+    experience: 9,
+    rating: 4.5,
+    reviews: 65,
+    cost: 2100,
+    languages: ["Hindi", "English", "Marathi"],
+    bio: "Chartered Accountant and Lawyer specializing in complex tax tribunals and corporate tax planning. Efficiently handling GST and income tax litigation.",
+    education: "LLB - GLC Mumbai",
+    barReg: "MH/2015/02283"
+  },
+  {
+    name: "Adv. Shalini Rao",
+    specializations: ["Immigration Law", "Civil Litigation"],
+    city: "Chennai",
+    experience: 7,
+    rating: 4.4,
+    reviews: 44,
+    cost: 1200,
+    languages: ["Tamil", "English"],
+    bio: "Dedicated immigration lawyer assisting individuals and companies with visas, citizenship issues, and deportation defense.",
+    education: "LLB - Madras Law College",
+    barReg: "TN/2017/05011"
+  },
+  {
+    name: "Adv. Tariq Khan",
+    specializations: ["Real Estate", "Constitutional Law"],
+    city: "Hyderabad",
+    experience: 25,
+    rating: 5.0,
+    reviews: 320,
+    cost: 3000,
+    languages: ["Urdu", "Telugu", "English"],
+    bio: "One of the most senior advocates dealing with high-profile constitutional matters and major real estate disputes in the High Court.",
+    education: "LLB - Osmania University",
+    barReg: "TS/1999/00088"
   }
 ];
 

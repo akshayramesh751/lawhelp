@@ -3,9 +3,12 @@ const cors = require('cors');
 const dotenv = require('dotenv');
 const connectDB = require('./utils/db');
 
+const { connectRedis } = require('./utils/redis');
+
 dotenv.config();
 
 connectDB();
+connectRedis(); // Initialize Redis Connection
 
 const app = express();
 
