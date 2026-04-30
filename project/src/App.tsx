@@ -10,6 +10,7 @@ const LawyerListingPage = lazy(() => import('./pages/LawyerListingPage'));
 const LawyerProfilePage = lazy(() => import('./pages/LawyerProfilePage'));
 const BookingConfirmPage = lazy(() => import('./pages/BookingConfirmPage'));
 const DashboardPage = lazy(() => import('./pages/DashboardPage'));
+const AIAnalysisPage = lazy(() => import('./pages/AIAnalysisPage'));
 
 function App() {
   const [user, setUser] = useState<User | null>(null);
@@ -47,6 +48,8 @@ function App() {
         return <BookingConfirmPage onNavigate={handleNavigate} lawyerId={navData?.lawyerId || 1} slot={navData?.slot || ''} />;
       case 'dashboard':
         return <DashboardPage onNavigate={handleNavigate} />;
+      case 'ai-analysis':
+        return <AIAnalysisPage onNavigate={handleNavigate} />;
       default:
         return <HomePage onNavigate={handleNavigate} />;
     }

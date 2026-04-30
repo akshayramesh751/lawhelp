@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ArrowRight, MessageSquare, UserCheck, Calendar, Star, Scale } from "lucide-react";
+import { ArrowRight, MessageSquare, UserCheck, Calendar, Star, Scale, Sparkles } from "lucide-react";
 
 interface HomePageProps {
   onNavigate: (page: string, data?: { searchQuery?: string }) => void;
@@ -76,6 +76,19 @@ export default function HomePage({ onNavigate }: HomePageProps) {
                 </button>
               </div>
             </div>
+          </div>
+
+          {/* AI Analysis Button */}
+          <div className="flex justify-center mt-6 slide-up" style={{ animationDelay: '0.1s' }}>
+            <button
+              onClick={() => onNavigate("ai-analysis")}
+              className="group flex items-center gap-3 bg-gradient-to-r from-blue-900/40 to-purple-900/40 hover:from-blue-800/60 hover:to-purple-800/60 border border-blue-500/30 px-6 py-3 rounded-full transition-all duration-300"
+            >
+              <div className="bg-blue-500/20 p-1.5 rounded-full group-hover:bg-blue-500/30 transition-colors">
+                <Sparkles className="w-4 h-4 text-blue-300" />
+              </div>
+              <span className="text-sm font-medium text-blue-100">Try AI Legal Document Analysis</span>
+            </button>
           </div>
 
           {/* Stats Row */}
