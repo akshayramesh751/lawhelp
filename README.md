@@ -115,8 +115,3 @@ npm install
 npm run dev
 ```
 
-*(Optional) Terminal 4 for Webhook/API Testing via ngrok:*
-```bash
-cd server
-ngrok http 5000
-```
