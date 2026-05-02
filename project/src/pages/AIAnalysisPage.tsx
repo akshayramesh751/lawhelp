@@ -6,6 +6,7 @@ export default function AIAnalysisPage({ }: { onNavigate: (page: string) => void
   const [isDragging, setIsDragging] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [extractedText, setExtractedText] = useState<string>('');
+  const [classification, setClassification] = useState<any>(null);
   const [error, setError] = useState('');
 
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -49,6 +50,7 @@ export default function AIAnalysisPage({ }: { onNavigate: (page: string) => void
 
     setFile(selectedFile);
     setExtractedText('');
+    setClassification(null);
   };
 
   const handleUpload = async () => {
@@ -74,6 +76,9 @@ export default function AIAnalysisPage({ }: { onNavigate: (page: string) => void
       }
 
       setExtractedText(data.text);
+      if (data.classification) {
+        setClassification(data.classification);
+      }
     } catch (err: any) {
       setError(err.message || 'An error occurred during extraction');
     } finally {
@@ -170,6 +175,22 @@ export default function AIAnalysisPage({ }: { onNavigate: (page: string) => void
       {/* Extracted Text Results Area */}
       {extractedText && (
         <div className="bg-[#0c1324] border border-white/[0.05] rounded-2xl p-6 shadow-2xl animate-in fade-in slide-in-from-bottom-4 duration-500">
+          
+          {classification && (
+            <div className="mb-6 flex flex-col sm:flex-row items-start sm:items-center justify-between bg-gold/10 border border-gold/20 p-5 rounded-xl">
+              <div className="mb-4 sm:mb-0">
+                <p className="text-gold/70 text-xs font-bold uppercase tracking-widest mb-1">Detected Document Domain</p>
+                <h3 className="text-2xl font-serif font-bold text-gold">{classification.domain}</h3>
+              </div>
+              <div className="sm:text-right flex items-center sm:block gap-4">
+                <div className="px-3 py-1 bg-[#0c1324] rounded-md border border-gold/20">
+                  <p className="text-gray-400 text-[10px] font-bold uppercase tracking-widest">Confidence</p>
+                  <p className="text-lg font-bold text-white">{(classification.confidence * 100).toFixed(0)}%</p>
+                </div>
+              </div>
+            </div>
+          )}
+
           <div className="flex items-center justify-between mb-4 border-b border-gray-800 pb-4">
             <h2 className="text-xl font-bold text-white">Extracted Information</h2>
             <button

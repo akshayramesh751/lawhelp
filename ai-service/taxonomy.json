@@ -1,0 +1,88 @@
+{
+    "domains": [
+        "Rental Agreement",
+        "Employment Contract",
+        "Sale Deed",
+        "Legal Notice",
+        "Non-Disclosure Agreement"
+    ],
+    "headers": {
+        "Rental Agreement": [
+            "rental agreement",
+            "lease agreement",
+            "leave and license agreement",
+            "ಬಾಡಿಗೆ ಕರಾರು ಪತ್ರ",
+            "ಬಾಡಿಗೆ ಕರಾರು"
+        ],
+        "Employment Contract": [
+            "employment contract",
+            "offer letter",
+            "appointment letter",
+            "employment agreement",
+            "ಉದ್ಯೋಗ ಒಪ್ಪಂದ"
+        ],
+        "Sale Deed": [
+            "sale deed",
+            "deed of absolute sale",
+            "ಮಾರಾಟ ಪತ್ರ"
+        ],
+        "Legal Notice": [
+            "legal notice",
+            "notice of demand",
+            "ವಕೀಲರ ನೋಟಿಸ್"
+        ],
+        "Non-Disclosure Agreement": [
+            "non-disclosure agreement",
+            "confidentiality agreement",
+            "nda"
+        ]
+    },
+    "weighted_keywords": {
+        "Rental Agreement": {
+            "security deposit": 5,
+            "lessor": 10,
+            "lessee": 10,
+            "bescom": 2,
+            "monthly rent": 5,
+            "tenancy": 8,
+            "premises": 3,
+            "fixtures": 2
+        },
+        "Employment Contract": {
+            "remuneration": 8,
+            "probation": 10,
+            "notice period": 8,
+            "salary": 5,
+            "designation": 4,
+            "working hours": 4,
+            "leave policy": 5,
+            "employee": 6,
+            "employer": 6
+        },
+        "Sale Deed": {
+            "purchaser": 8,
+            "vendor": 8,
+            "schedule property": 10,
+            "consideration amount": 8,
+            "stamp duty": 5,
+            "registration fee": 5,
+            "absolute owner": 7
+        },
+        "Legal Notice": {
+            "under instructions from my client": 10,
+            "call upon you": 8,
+            "legal proceedings": 6,
+            "civil or criminal": 5,
+            "cause of action": 7,
+            "within 15 days": 4
+        },
+        "Non-Disclosure Agreement": {
+            "confidential information": 10,
+            "disclosing party": 8,
+            "receiving party": 8,
+            "trade secrets": 7,
+            "intellectual property": 5,
+            "non-compete": 6
+        }
+    }
+}
