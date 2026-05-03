@@ -2,15 +2,21 @@ const Tesseract = require('tesseract.js');
 
 const extractText = async (req, res) => {
     try {
-        if (!req.file) {
+        if (!req.files || req.files.length === 0) {
             return res.status(400).json({ message: 'No file uploaded' });
         }
 
-        const fileBuffer = req.file.buffer;
-        const mimeType = req.file.mimetype;
+        const firstFile = req.files[0];
+        const mimeType = firstFile.mimetype;
         let extractedText = '';
 
         if (mimeType === 'application/pdf') {
+            if (req.files.length > 1) {
+                return res.status(400).json({ message: 'Please upload only 1 PDF document at a time.' });
+            }
+            
+            const fileBuffer = firstFile.buffer;
+            
             // ==========================================
             // NATIVE-FIRST ROUTING (PDFs -> Python)
             // ==========================================
@@ -19,7 +25,7 @@ const extractText = async (req, res) => {
                 // Create a native Blob from the buffer
                 const blob = new Blob([fileBuffer], { type: 'application/pdf' });
                 const formData = new FormData();
-                formData.append('file', blob, req.file.originalname || 'document.pdf');
+                formData.append('file', blob, firstFile.originalname || 'document.pdf');
                 formData.append('source_language', 'auto');
 
                 // Let native fetch automatically set the Content-Type boundary header
@@ -53,11 +59,21 @@ const extractText = async (req, res) => {
                 return res.status(500).json({ message: 'AI processing failed natively' });
             }
         } else if (mimeType.startsWith('image/')) {
-            // Process scanned image using Tesseract OCR
-            const result = await Tesseract.recognize(fileBuffer, 'eng');
-            extractedText = result.data.text;
+            // Check if all files are images
+            const allImages = req.files.every(f => f.mimetype.startsWith('image/'));
+            if (!allImages) {
+                return res.status(400).json({ message: 'Cannot mix PDFs and images. Please upload up to 5 images OR 1 PDF.' });
+            }
+            
+            // Process scanned images using Tesseract OCR concurrently
+            console.log(`Processing ${req.files.length} image(s)...`);
+            const ocrPromises = req.files.map(file => Tesseract.recognize(file.buffer, 'eng'));
+            const results = await Promise.all(ocrPromises);
+            
+            // Combine extracted text with page separators
+            extractedText = results.map((result, idx) => `--- PAGE ${idx + 1} ---\n${result.data.text}`).join('\n\n');
         } else {
-            return res.status(400).json({ message: 'Unsupported file type. Please upload a PDF or an Image.' });
+            return res.status(400).json({ message: 'Unsupported file type. Please upload a PDF or Image(s).' });
         }
 
         // ==========================================

@@ -9,7 +9,7 @@ const upload = multer({
     limits: { fileSize: 10 * 1024 * 1024 } // 10MB limit
 });
 
-// We only process one file at a time
-router.post('/extract', upload.single('document'), aiController.extractText);
+// We can process up to 5 image files or 1 PDF at a time
+router.post('/extract', upload.array('documents', 5), aiController.extractText);
 
 module.exports = router;

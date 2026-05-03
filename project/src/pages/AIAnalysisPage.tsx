@@ -2,7 +2,7 @@ import React, { useState, useRef } from 'react';
 import { UploadCloud, FileText, FileImage, ShieldAlert, Loader2 } from 'lucide-react';
 
 export default function AIAnalysisPage({ }: { onNavigate: (page: string) => void }) {
-  const [file, setFile] = useState<File | null>(null);
+  const [files, setFiles] = useState<File[]>([]);
   const [isDragging, setIsDragging] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [extractedText, setExtractedText] = useState<string>('');
@@ -25,42 +25,57 @@ export default function AIAnalysisPage({ }: { onNavigate: (page: string) => void
     setIsDragging(false);
 
     if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
-      handleFileSelection(e.dataTransfer.files[0]);
+      handleFilesSelection(Array.from(e.dataTransfer.files));
     }
   };
 
   const handleFileInput = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
-      handleFileSelection(e.target.files[0]);
+      handleFilesSelection(Array.from(e.target.files));
     }
   };
 
-  const handleFileSelection = (selectedFile: File) => {
+  const handleFilesSelection = (selectedFiles: File[]) => {
     setError('');
-    const isValidType = selectedFile.type === 'application/pdf' || selectedFile.type.startsWith('image/');
-    if (!isValidType) {
-      setError('Unsupported file format. Please upload a PDF or an Image.');
+    
+    // Check if there's any PDF
+    const hasPdf = selectedFiles.some(f => f.type === 'application/pdf');
+    
+    if (hasPdf && selectedFiles.length > 1) {
+      setError('Please upload only 1 PDF document at a time. Multiple images are allowed.');
       return;
     }
 
-    if (selectedFile.size > 10 * 1024 * 1024) {
-      setError('File size exceeds the 10MB limit.');
+    if (!hasPdf && selectedFiles.length > 5) {
+      setError('You can upload a maximum of 5 images at a time.');
       return;
     }
 
-    setFile(selectedFile);
+    for (const f of selectedFiles) {
+      const isValidType = f.type === 'application/pdf' || f.type.startsWith('image/');
+      if (!isValidType) {
+        setError('Unsupported file format. Please upload a PDF or Image(s).');
+        return;
+      }
+      if (f.size > 10 * 1024 * 1024) {
+        setError(`File ${f.name} exceeds the 10MB limit.`);
+        return;
+      }
+    }
+
+    setFiles(selectedFiles);
     setExtractedText('');
     setClassification(null);
   };
 
   const handleUpload = async () => {
-    if (!file) return;
+    if (files.length === 0) return;
 
     setIsLoading(true);
     setError('');
 
     const formData = new FormData();
-    formData.append('document', file);
+    files.forEach(f => formData.append('documents', f));
 
     try {
       // In production, BASE_URL should be derived from env
@@ -112,26 +127,31 @@ export default function AIAnalysisPage({ }: { onNavigate: (page: string) => void
             ref={fileInputRef}
             className="hidden"
             accept="application/pdf,image/png,image/jpeg,image/webp"
+            multiple
             onChange={handleFileInput}
           />
 
           <div className="mb-4 bg-gray-800/50 p-4 rounded-full text-gold">
-            {file ? (
-              file.type === 'application/pdf' ? <FileText size={40} /> : <FileImage size={40} />
+            {files.length > 0 ? (
+              files[0].type === 'application/pdf' ? <FileText size={40} /> : <FileImage size={40} />
             ) : (
               <UploadCloud size={40} />
             )}
           </div>
 
-          {file ? (
+          {files.length > 0 ? (
             <div>
-              <p className="text-white font-medium text-lg">{file.name}</p>
-              <p className="text-gray-400 text-sm mt-1">{(file.size / 1024 / 1024).toFixed(2)} MB</p>
+              {files.map((f, i) => (
+                <div key={i} className="flex justify-between items-center text-left mb-1 bg-gray-900/50 px-3 py-1 rounded">
+                  <p className="text-white font-medium text-sm truncate max-w-[200px]">{f.name}</p>
+                  <p className="text-gray-400 text-xs ml-4">{(f.size / 1024 / 1024).toFixed(2)} MB</p>
+                </div>
+              ))}
               <button
-                onClick={(e) => { e.stopPropagation(); setFile(null); setExtractedText(''); setError(''); }}
-                className="mt-3 text-red-400 hover:text-red-300 text-sm"
+                onClick={(e) => { e.stopPropagation(); setFiles([]); setExtractedText(''); setError(''); }}
+                className="mt-4 text-red-400 hover:text-red-300 text-sm font-medium border border-red-400/20 bg-red-400/10 px-4 py-1.5 rounded-md"
               >
-                Remove File
+                Clear Files
               </button>
             </div>
           ) : (
@@ -157,9 +177,9 @@ export default function AIAnalysisPage({ }: { onNavigate: (page: string) => void
 
           <button
             onClick={handleUpload}
-            disabled={!file || isLoading}
+            disabled={files.length === 0 || isLoading}
             className={`px-8 py-3 rounded-lg font-bold transition-all whitespace-nowrap flex items-center justify-center gap-2
-              ${!file || isLoading ? 'bg-gray-700 text-gray-400 cursor-not-allowed' : 'bg-gold hover:bg-gold-500 text-navy'}
+              ${files.length === 0 || isLoading ? 'bg-gray-700 text-gray-400 cursor-not-allowed' : 'bg-gold hover:bg-gold-500 text-navy'}
             `}
           >
             {isLoading ? (

@@ -57,14 +57,25 @@ def process_text_pipeline(text: str, source_language: str) -> DocumentResponse:
     original_length = len(text)
     
     # ==========================================
-    # PRE-PROCESSING: Unicode Normalization (NFKC)
+    # STAGE 0: PRE-PROCESSING: Unicode Normalization
     # ==========================================
-    # Merges Kannada vowel signs into single Unicode points to prevent OCR gibberish
+    
+    # Custom Kannada "Joint Character" Unicode Fix
+    # OCR often places spaces before Kannada vowel signs or the Virama (joiner).
+    # This regex finds any Kannada character followed by a space, followed by a vowel sign or virama, and merges them.
+    text = re.sub(r'([\u0C80-\u0CFF])\s+([\u0CBE-\u0CCC\u0CCD])', r'\1\2', text)
+
+    # Standard Unicode Normalization (NFKC)
     text = unicodedata.normalize('NFKC', text)
 
     # ==========================================
     # STAGE 1: OCR Sanity Check & Formatting Fixes
     # ==========================================
+    # 0. Kannada Numeral Converter
+    # Converts Kannada digits to International Arabic numerals to prevent data corruption
+    kannada_digits = str.maketrans("೦೧೨೩೪೫೬೭೮೯", "0123456789")
+    text = text.translate(kannada_digits)
+
     # 1. Fix Indian Currency OCR Blinks (e.g., 1.50.000/- -> 1,50,000/-)
     # Replaces periods with commas in Indian numbering systems
     text = re.sub(r'\b(\d{1,2})\.(\d{2})\.(\d{3})\b', r'\1,\2,\3', text)
@@ -84,7 +95,21 @@ def process_text_pipeline(text: str, source_language: str) -> DocumentResponse:
 
     # Honorific & Legal Anchor Mapping (Prevent hallucination on proper nouns/roles)
     if source_language.lower() != "en":
+        
+        # ------------------------------------------
+        # Suffix Logic (Agglutination Handling)
+        # ------------------------------------------
+        # Kannada attaches suffixes to indicate context. We strip these and wrap the name in standard English.
+        # "Name + ಅವರೇ" -> "Dear Name"
+        text = re.sub(r'([^\s,.]+)\s*ಅವರೇ\b', r'Dear \1', text)
+        # "Name + ಇವರಿಂದ" -> "From Name"
+        text = re.sub(r'([^\s,.]+)\s*ಇವರಿಂದ\b', r'From \1', text)
+        # "Name + ಇವರಿಗೆ" -> "To Name"
+        text = re.sub(r'([^\s,.]+)\s*ಇವರಿಗೆ\b', r'To \1', text)
+
+        # ------------------------------------------
         # The Deterministic Legal Glossary
+        # ------------------------------------------
         # Pre-translation overrides mapping Kannada terms to exact English legal terms
         kannada_map = {
             # Honorifics
@@ -115,7 +140,11 @@ def process_text_pipeline(text: str, source_language: str) -> DocumentResponse:
             "ಉದ್ಯೋಗ": "Employment",
             "ವೇತನ": "Salary",
             "ರಾಜೀನಾಮೆ": "Resignation",
-            "ಸೇವಾ": "Service"
+            "ಸೇವಾ": "Service",
+            "ಪ್ರೊಬೆಷನರಿ ಅವಧಿ": "Probation Period",
+            "ಶಾಸನಬದ್ಧ ಸೌಲಭ್ಯಗಳು": "Statutory Benefits",
+            "ನೇಮಕಾತಿ": "Appointment/Recruitment",
+            "ಕೆಲಸದಿಂದ ವಜಾ ಮಾಡುವ ಹಕ್ಕು": "Right to Dismiss/Terminate"
         }
         for k_word, e_word in kannada_map.items():
             text = text.replace(k_word, f" {e_word} ")
