@@ -57,7 +57,7 @@ const createBooking = async (req, res) => {
 
       const subject = `New Consultation Request from ${user.name}`;
       const htmlContent = `
-        <h2>⚖️ NyayaConnect Consultation Request</h2>
+        <h2>⚖️ CaseCounsel Consultation Request</h2>
         <p><strong>Client:</strong> ${user.name}</p>
         <p><strong>Date:</strong> ${formattedDate}</p>
         <p><strong>Time Slot:</strong> ${timeSlot}</p>

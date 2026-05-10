@@ -29,7 +29,7 @@ export default function Navbar({ onNavigate, user }: NavbarProps) {
             className="flex items-center gap-2 text-gold hover:text-gold-300 transition-colors"
           >
             <Scale className="w-6 h-6" />
-            <span className="font-serif text-xl font-bold">NyayaConnect</span>
+            <span className="font-serif text-xl font-bold">CaseCounsel</span>
           </button>
 
           <div className="hidden md:flex items-center gap-8">

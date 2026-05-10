@@ -16,7 +16,7 @@ const sendEmail = async (to, subject, htmlContent) => {
     });
 
     const mailOptions = {
-      from: `"NyayaConnect Bookings" <${process.env.EMAIL_USER}>`,
+      from: `"CaseCounsel Bookings" <${process.env.EMAIL_USER}>`,
       to,
       subject,
       html: htmlContent,

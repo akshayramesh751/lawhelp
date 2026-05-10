@@ -124,3 +124,61 @@ cd project
 npm install
 npm run dev
 ```
+
+## Detailed Technical Architecture & Workflow Specifications
+
+The following sections provide a deep dive into the technical architecture and end-to-end workflows of the two primary subsystems of CaseCounsel (formerly NyayaConnect): the AI Document Summarizer and the Lawyer Booking Engine.
+
+### 1. System Architecture: AI Document Summarizer
+This subsystem is designed to handle complex legal NLP workloads seamlessly, focusing on deterministic accuracy over probabilistic generation to ensure strict legal fidelity.
+* **Client Interface (React/Vite)**: The frontend accepts multiple document types (images, PDFs) via a drag-and-drop interface. It validates file sizes and types before dispatching a `multipart/form-data` request.
+* **API Gateway (Node.js/Express)**: Acts as the primary orchestrator.
+  * **Multer Middleware**: Safely processes incoming files in memory.
+  * **Tesseract OCR Wrapper**: If images are uploaded, the Node.js layer concurrently runs Tesseract OCR across all images to extract raw text, mitigating the need to pass heavy binary image payloads to the Python service. PDFs are streamed directly as binary buffers.
+* **AI Microservice (Python/FastAPI)**: The core processing engine isolated from the Node.js event loop.
+  * **Ingestion Engine**: Uses `PyMuPDF` for native digital text extraction from PDFs. If the PDF is scanned (low text density), it rejects it and triggers OCR fallback.
+  * **Preprocessing & Normalization Module**: Handles Unicode normalization (NFKC) and Kannada character fixes (merging broken conjuncts, converting numerals).
+  * **Regex & PII Redaction Pipeline**: Applies custom Regex to redact structured PII (Aadhaar, PAN, Cheque numbers) and handles domain-specific deterministic term replacement before translation.
+  * **Translation Pipeline**: Implements chunked translation processing to convert regional text (Kannada) to English.
+  * **NLP Anonymization (Microsoft Presidio)**: Masks unstructured PII (Emails, Phones) post-translation while retaining context (Names, Organizations).
+  * **Classification Engine**: A 3-Tier hierarchical engine (Header matching -> Keyword Sliding Window -> Zero-Shot ML) that categorizes the document (e.g., Rental Agreement, Employment Contract).
+
+### 2. System Architecture: Lawyer Booking App
+This subsystem serves as a robust marketplace connecting users with verified legal professionals. It is structured around a traditional RESTful API architecture optimized for speed and reliability.
+* **Frontend Application (React/Vite)**:
+  * Features the "Midnight Gilded" premium UI, ensuring a highly polished user experience.
+  * Uses React Hooks for state management to handle filtering, dynamic calendar rendering, and form submissions.
+* **Backend API (Node.js/Express)**:
+  * Implements RESTful endpoints (`/api/lawyers`, `/api/bookings`, etc.) to handle CRUD operations.
+  * **Caching Layer (Redis)**: Integrated to cache frequent query results, such as the lawyer directory and specialty filters, significantly reducing database read latency.
+* **Database (MongoDB Atlas)**:
+  * Uses Mongoose ODMs with strict schemas for `Users`, `Lawyers`, and `Bookings`.
+  * Enforces relationships (e.g., a Booking belongs to a User and a Lawyer).
+* **Notification System (Nodemailer)**:
+  * An asynchronous utility that intercepts successful booking events and dispatches confirmation HTML emails via Gmail SMTP, confirming the appointment for both the user and the lawyer.
+
+### 3. Workflow Explanation: AI Document Summarizer
+This is the sequential step-by-step process of how a document is processed when a user uploads it.
+1. **Upload & Validation**: The user drops a document (e.g., a Kannada rental agreement) into the UI. The React app validates it (max 5 images or 1 PDF) and sends an HTTP POST request to the Node.js `/api/upload` endpoint.
+2. **Initial Parsing (Node.js)**: The `multer` middleware receives the file. 
+   - *If Image*: Node.js triggers `tesseract.js` to run OCR, extracting raw text. It then sends this text payload to the Python `/extract` endpoint.
+   - *If PDF*: Node.js streams the raw PDF binary to the Python service.
+3. **Native Extraction (Python)**: The Python FastAPI service attempts to read the PDF using `PyMuPDF`. If digital text is found, it proceeds. If it's a scanned PDF, it falls back to OCR.
+4. **Text Normalization**: The raw text undergoes rigorous cleanup: broken Kannada characters are fused, Unicode matras are mathematically aligned, and numerals are converted to standard Arabic.
+5. **Pre-Translation Masking**: Custom Regex targets and masks highly sensitive IDs (like PAN and Aadhaar) so that the translation engine does not alter their formatting.
+6. **Translation & Post-Processing**: The text is chunked into 1000-character blocks, sent to Google Translate, and stitched back together. Any translation anomalies (hallucinations) are stripped out.
+7. **Contextual Anonymization**: Microsoft Presidio scans the English text to mask standard PII (phone numbers, email addresses).
+8. **Classification**: The sanitized text enters the 3-Tier classification engine to determine the legal domain.
+9. **Response**: The Node.js server receives the final sanitized text and its classification label, and relays this JSON payload back to the React frontend, which renders the results beautifully.
+
+### 4. Workflow Explanation: Lawyer Booking App
+This outlines the user journey from discovering a lawyer to successfully scheduling an appointment.
+1. **User Authentication**: The user visits the application and logs in (via standard Auth/OAuth). The session is established.
+2. **Directory Browsing**: The user navigates to the Lawyer Directory. The React frontend sends a GET request to `/api/lawyers`.
+3. **Redis Caching**: The Node.js server intercepts the request, checks the Redis cache for existing directory data, and instantly returns it if available (cache hit), bypassing the MongoDB query.
+4. **Filtering**: The user filters lawyers by specialty (e.g., "Family Law"). The UI updates the list dynamically based on the cached or fetched data.
+5. **Selecting a Slot**: The user clicks a lawyer profile. The React app dynamically generates available evening slots (4 PM – 8 PM, Mon–Sat) based on current availability and past dates.
+6. **Booking Submission**: The user selects a time and clicks "Book". The frontend sends a POST request with the user ID, lawyer ID, and timestamp to `/api/bookings`.
+7. **Database Transaction**: The Node.js server validates the slot, creates a new Booking document in MongoDB, and updates the lawyer's availability.
+8. **Notification Dispatch**: Upon successful database insertion, the Node.js server triggers the Nodemailer utility. It securely fetches the app password from environment variables and sends confirmation emails to the user and the lawyer.
+9. **UI Update**: The Node.js server returns a `200 OK` status to the frontend. The React app shows a success modal, and the user's dashboard is updated with the upcoming appointment.

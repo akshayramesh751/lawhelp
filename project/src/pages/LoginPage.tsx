@@ -70,7 +70,7 @@ const LoginPage = () => {
               <div className="w-9 h-9 bg-[#C9A84C]/10 rounded-lg flex items-center justify-center">
                 <Scale className="w-5 h-5 text-[#C9A84C]" />
               </div>
-              <span className="text-xl font-serif font-semibold text-white tracking-wide">NyayaConnect</span>
+              <span className="text-xl font-serif font-semibold text-white tracking-wide">CaseCounsel</span>
             </div>
             <h1 className="text-2xl font-serif text-white font-semibold mb-1.5">
               {isLogin ? 'Welcome back' : 'Create your account'}

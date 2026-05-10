@@ -1,7 +1,7 @@
-# NyayaConnect Frontend Application
+# CaseCounsel Frontend Application
 
 ## The Goal
-The goal of the NyayaConnect frontend is to transform the typically daunting task of securing legal help into an approachable, trustworthy, and modern digital experience. The design principles focus on a premium, responsive interface that builds user confidence. Our objective here is to give users immediate clarity through detailed, verified lawyer profiles and frictionless consultation scheduling across any device viewing dimension.
+The goal of the CaseCounsel frontend is to transform the typically daunting task of securing legal help into an approachable, trustworthy, and modern digital experience. The design principles focus on a premium, responsive interface that builds user confidence. Our objective here is to give users immediate clarity through detailed, verified lawyer profiles and frictionless consultation scheduling across any device viewing dimension.
 
 ## System Overview and Under the Hood
 The project is built on Vite, React, and TypeScript. It uses functional components exclusively, relying heavily on modern React Hooks (like `useEffect` and `useState`) to govern application lifecycle and state.
