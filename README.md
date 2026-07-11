@@ -1,7 +1,7 @@
-# NyayaConnect: Comprehensive Legal Services Platform
+# CaseCounsel: Comprehensive Legal Services Platform
 
 ## 🎯 Overview
-The primary goal of **NyayaConnect** is to democratize access to legal assistance. Navigating the legal landscape can be complex and intimidating. This platform bridges the gap between individuals seeking legal advice and qualified legal professionals by providing a transparent, user-friendly digital marketplace paired with cutting-edge AI legal document analysis.
+The primary goal of **CaseCounsel** is to democratize access to legal assistance. Navigating the legal landscape can be complex and intimidating. This platform bridges the gap between individuals seeking legal advice and qualified legal professionals by providing a transparent, user-friendly digital marketplace paired with cutting-edge AI legal document analysis.
 
 ---
 
