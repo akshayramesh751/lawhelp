@@ -33,6 +33,7 @@ const bookingRoutes = require('./routes/bookingRoutes');
 const reviewRoutes = require('./routes/reviewRoutes');
 const userRoutes = require('./routes/userRoutes');
 const aiRoutes = require('./routes/aiRoutes');
+const documentRoutes = require('./routes/documentRoutes');
 
 app.get('/', (req, res) => {
   res.send('Server running on port 5000');
@@ -44,6 +45,7 @@ app.use('/api/bookings', bookingRoutes);
 app.use('/api/reviews', reviewRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/ai', aiRoutes);
+app.use('/api/documents', documentRoutes);
 
 const PORT = process.env.PORT || 5000;
 

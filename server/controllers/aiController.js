@@ -1,17 +1,51 @@
 const Tesseract = require('tesseract.js');
+const { v4: uuidv4 } = require('uuid');
+const { uploadToS3 } = require('../utils/s3');
+const OriginalDocument = require('../models/OriginalDocument');
 
 const extractText = async (req, res) => {
+    let documentId = null;
     try {
         if (!req.files || req.files.length === 0) {
             return res.status(400).json({ message: 'No file uploaded' });
         }
 
+        // ==========================================
+        // STEP 1: DURABLE FILE REGISTRY INTAKE
+        // ==========================================
+        documentId = uuidv4();
+        console.log(`[Registry] Ingesting files under Document ID: ${documentId}`);
+
+        const uploadPromises = req.files.map(async (file, index) => {
+            // Upload to S3 (or local disk in fallback mode) with server-side encryption
+            const s3Key = await uploadToS3(file.buffer, file.originalname, file.mimetype);
+
+            // Save raw file metadata record to MongoDB
+            const originalDoc = new OriginalDocument({
+                documentId,
+                fileName: file.originalname,
+                s3Key,
+                mimeType: file.mimetype,
+                size: file.size,
+                sequenceIndex: index,
+                status: 'pending' // Initial status is pending
+            });
+
+            return await originalDoc.save();
+        });
+
+        // Wait for all uploads and database records to resolve
+        await Promise.all(uploadPromises);
+        console.log(`[Registry] Durably registered ${req.files.length} file(s) for Document ID: ${documentId}`);
+
         const firstFile = req.files[0];
         const mimeType = firstFile.mimetype;
         let extractedText = '';
+        let aiResult = null;
 
         if (mimeType === 'application/pdf') {
             if (req.files.length > 1) {
+                await OriginalDocument.updateMany({ documentId }, { status: 'failed' });
                 return res.status(400).json({ message: 'Please upload only 1 PDF document at a time.' });
             }
             
@@ -22,46 +56,41 @@ const extractText = async (req, res) => {
             // ==========================================
             try {
                 // Send raw file to Python for Native Text Extraction (PyMuPDF)
-                // Create a native Blob from the buffer
                 const blob = new Blob([fileBuffer], { type: 'application/pdf' });
                 const formData = new FormData();
                 formData.append('file', blob, firstFile.originalname || 'document.pdf');
                 formData.append('source_language', 'auto');
 
-                // Let native fetch automatically set the Content-Type boundary header
                 const aiResponse = await fetch('http://localhost:8000/process-pdf', {
                     method: 'POST',
                     body: formData
                 });
 
                 if (aiResponse.status === 422) {
-                    // Python detected a scanned PDF (low text density).
-                    // We must fallback to Tesseract OCR!
+                    // Python detected a scanned PDF (low text density). Fall back to Tesseract OCR!
                     console.log("Python reported Scanned PDF. Falling back to OCR...");
                     const result = await Tesseract.recognize(fileBuffer, 'eng');
                     extractedText = result.data.text;
-                    // Proceed to send extractedText to /process-document below
+                    
+                    // Route the extracted text via Text-First routing
+                    aiResult = await sendTextToPython(extractedText);
                 } else if (!aiResponse.ok) {
                     console.error('Python AI Engine error:', aiResponse.statusText);
+                    await OriginalDocument.updateMany({ documentId }, { status: 'failed' });
                     return res.status(500).json({ message: 'Error processing PDF natively' });
                 } else {
-                    // Success! Native extraction and NLP completed entirely in Python.
-                    const aiData = await aiResponse.json();
-                    return res.json({ 
-                        text: aiData.translated_text,
-                        original_length: aiData.original_length,
-                        is_anonymized: true,
-                        classification: aiData.classification
-                    });
+                    aiResult = await aiResponse.json();
                 }
             } catch (err) {
                 console.error("Failed Native PDF processing:", err);
+                await OriginalDocument.updateMany({ documentId }, { status: 'failed' });
                 return res.status(500).json({ message: 'AI processing failed natively' });
             }
         } else if (mimeType.startsWith('image/')) {
             // Check if all files are images
             const allImages = req.files.every(f => f.mimetype.startsWith('image/'));
             if (!allImages) {
+                await OriginalDocument.updateMany({ documentId }, { status: 'failed' });
                 return res.status(400).json({ message: 'Cannot mix PDFs and images. Please upload up to 5 images OR 1 PDF.' });
             }
             
@@ -72,44 +101,59 @@ const extractText = async (req, res) => {
             
             // Combine extracted text with page separators
             extractedText = results.map((result, idx) => `--- PAGE ${idx + 1} ---\n${result.data.text}`).join('\n\n');
+            
+            // Route extracted text to Python AI Engine
+            aiResult = await sendTextToPython(extractedText);
         } else {
+            await OriginalDocument.updateMany({ documentId }, { status: 'failed' });
             return res.status(400).json({ message: 'Unsupported file type. Please upload a PDF or Image(s).' });
         }
 
-        // ==========================================
-        // TEXT-FIRST ROUTING (Images/Scanned PDFs -> Python)
-        // ==========================================
-        // If we reach here, it means we performed OCR (either because it was an image, or fallback from a scanned PDF).
-        try {
-            const aiResponse = await fetch('http://localhost:8000/process-document', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ 
-                    text: extractedText,
-                    source_language: "auto" 
-                })
-            });
+        // Update document status in the registry to processed upon success
+        await OriginalDocument.updateMany({ documentId }, { status: 'processed' });
 
-            if (!aiResponse.ok) {
-                console.error('Python AI Engine error:', aiResponse.statusText);
-                return res.json({ text: extractedText });
-            }
+        // Respond to frontend with the documentId included
+        res.json({ 
+            documentId,
+            text: aiResult.translated_text || aiResult.text || extractedText,
+            original_length: aiResult.original_length || extractedText.length,
+            is_anonymized: true,
+            classification: aiResult.classification,
+            fileCount: req.files.length
+        });
 
-            const aiData = await aiResponse.json();
-            res.json({ 
-                text: aiData.translated_text, 
-                original_length: aiData.original_length,
-                is_anonymized: true,
-                classification: aiData.classification
-            });
-            
-        } catch (aiError) {
-            console.error('Failed to connect to Python AI Engine. Ensure it is running on port 8000.', aiError);
-            res.json({ text: extractedText, error: 'AI processing failed' });
-        }
     } catch (error) {
         console.error('Error during extraction:', error);
+        if (documentId) {
+            await OriginalDocument.updateMany({ documentId }, { status: 'failed' });
+        }
         res.status(500).json({ message: 'Error processing document', error: error.message });
+    }
+};
+
+/**
+ * Helper function to send OCR-extracted text to Python AI Engine for processing
+ */
+const sendTextToPython = async (text) => {
+    try {
+        const aiResponse = await fetch('http://localhost:8000/process-document', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ 
+                text,
+                source_language: "auto" 
+            })
+        });
+
+        if (!aiResponse.ok) {
+            console.error('Python AI Engine error:', aiResponse.statusText);
+            return { text };
+        }
+
+        return await aiResponse.json();
+    } catch (aiError) {
+        console.error('Failed to connect to Python AI Engine. Ensure it is running on port 8000.', aiError);
+        return { text, error: 'AI processing failed' };
     }
 };
 

@@ -7,6 +7,7 @@ export default function AIAnalysisPage({ }: { onNavigate: (page: string) => void
   const [isLoading, setIsLoading] = useState(false);
   const [extractedText, setExtractedText] = useState<string>('');
   const [classification, setClassification] = useState<any>(null);
+  const [documentId, setDocumentId] = useState<string>('');
   const [error, setError] = useState('');
 
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -94,6 +95,9 @@ export default function AIAnalysisPage({ }: { onNavigate: (page: string) => void
       if (data.classification) {
         setClassification(data.classification);
       }
+      if (data.documentId) {
+        setDocumentId(data.documentId);
+      }
     } catch (err: any) {
       setError(err.message || 'An error occurred during extraction');
     } finally {
@@ -148,7 +152,7 @@ export default function AIAnalysisPage({ }: { onNavigate: (page: string) => void
                 </div>
               ))}
               <button
-                onClick={(e) => { e.stopPropagation(); setFiles([]); setExtractedText(''); setError(''); }}
+                onClick={(e) => { e.stopPropagation(); setFiles([]); setExtractedText(''); setDocumentId(''); setError(''); }}
                 className="mt-4 text-red-400 hover:text-red-300 text-sm font-medium border border-red-400/20 bg-red-400/10 px-4 py-1.5 rounded-md"
               >
                 Clear Files
@@ -196,6 +200,18 @@ export default function AIAnalysisPage({ }: { onNavigate: (page: string) => void
       {extractedText && (
         <div className="bg-[#0c1324] border border-white/[0.05] rounded-2xl p-6 shadow-2xl animate-in fade-in slide-in-from-bottom-4 duration-500">
           
+          {documentId && (
+            <div className="mb-6 bg-[#090e1c] border border-white/[0.03] px-4 py-3.5 rounded-xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-inner">
+              <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3">
+                <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Durable Registry ID:</span>
+                <code className="text-xs text-gold font-mono break-all bg-navy/40 px-2 py-1 rounded border border-white/[0.02]">{documentId}</code>
+              </div>
+              <span className="text-[10px] text-green-400 bg-green-400/10 px-2.5 py-0.5 rounded-full border border-green-400/20 font-medium whitespace-nowrap">
+                Registered (30-day retention active)
+              </span>
+            </div>
+          )}
+
           {classification && (
             <div className="mb-6 flex flex-col sm:flex-row items-start sm:items-center justify-between bg-gold/10 border border-gold/20 p-5 rounded-xl">
               <div className="mb-4 sm:mb-0">
