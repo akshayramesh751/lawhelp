@@ -115,7 +115,7 @@ const extractText = async (req, res) => {
         // Respond to frontend with the documentId included
         res.json({ 
             documentId,
-            text: aiResult.translated_text || aiResult.text || extractedText,
+            text: aiResult.anonymized_text || aiResult.translated_text || aiResult.text || extractedText,
             original_length: aiResult.original_length || extractedText.length,
             is_anonymized: true,
             classification: aiResult.classification,

@@ -88,8 +88,24 @@ def process_text_pipeline(text: str, source_language: str) -> DocumentResponse:
     # STAGE 1.5: Parallel PII Regex & Anchor Mapping (On Raw Text)
     # ==========================================
     # Extract robust numeric PII before translation misinterprets commas or spaces
-    text = re.sub(r'\b\d{4}\s?\d{4}\s?\d{4}\b', '[AADHAAR_REDACTED]', text)
-    text = re.sub(r'\b[A-Z]{5}[0-9]{4}[A-Z]{1}\b', '[PAN_REDACTED]', text)
+    # 1. Redact Credit Cards FIRST in raw text stage (longer patterns before shorter patterns)
+    text = re.sub(r'\b\d{4}[- ]?\d{4}[- ]?\d{4}[- ]?\d{4}\b', '[CARD_REDACTED]', text)
+
+    # 2. Aadhaar Numbers: Ensure 12-digit Aadhaar numbers are not preceded or followed by another digit (part of card)
+    # Using fixed-width lookbehinds to comply with Python's re module requirements
+    text = re.sub(r'(?<!\d)(?<!\d )(?<!\d-)\b\d{4}[- ]?\d{4}[- ]?\d{4}\b(?!\s?\d)', '[AADHAAR_REDACTED]', text)
+    
+    # 3. PAN, Passport, IFSC
+    text = re.sub(r'\b[A-Z]{5}[0-9]{4}[A-Z]\b', '[PAN_REDACTED]', text, flags=re.IGNORECASE)
+    text = re.sub(r'\b[A-Z]\d{7}\b', '[PASSPORT_REDACTED]', text, flags=re.IGNORECASE)
+    text = re.sub(r'\b[A-Z]{4}0[A-Z0-9]{6}\b', '[IFSC_REDACTED]', text, flags=re.IGNORECASE)
+    
+    # 4. Context-aware numeric fields (Bank Account Numbers, CVV, Expiry Date, Date of Birth)
+    text = re.sub(r'(?i)(?:account|acc|a/c|acct|acc\.?|savings?|current)\s*(?:no\.?|number)?\s*[:#-]?\s*(\d{9,18})\b', lambda m: m.group(0).replace(m.group(1), '[ACCOUNT_REDACTED]'), text)
+    text = re.sub(r'(?i)(?:cvv2?|cvc)\s*[:#-]?\s*(\d{3,4})\b', lambda m: m.group(0).replace(m.group(1), '[CVV_REDACTED]'), text)
+    text = re.sub(r'(?i)(?:exp(?:iry)?|expires|expiry\s*date)\s*[:#-]?\s*(\d{2}\s*/\s*\d{2,4})\b', lambda m: m.group(0).replace(m.group(1), '[EXPIRY_REDACTED]'), text)
+    text = re.sub(r'(?i)(?:dob|date\s*of\s*birth|birth\s*date|born\s*on)\s*[:#-]?\s*(\d{1,2}[-/.]\d{1,2}[-/.]\d{2,4})\b', lambda m: m.group(0).replace(m.group(1), '[DOB_REDACTED]'), text)
+
     # Include Kannada keyword for cheque (ಚೆಕ್)
     text = re.sub(r'(?i)(cheque|chq|ಚೆಕ್)\.?\s*(?:no\.?|ಸಂಖ್ಯೆ)?\s*(\d{6})\b', r'\1 [CHEQUE_REDACTED]', text)
 
@@ -152,6 +168,10 @@ def process_text_pipeline(text: str, source_language: str) -> DocumentResponse:
     # ==========================================
     # STAGE 2: Efficient Translation (Google Translate Backend)
     # ==========================================
+    # Auto-detect English documents: if no Kannada characters are present, skip translation
+    if source_language.lower() == "auto" and not bool(re.search(r'[\u0C80-\u0CFF]', text)):
+        source_language = "en"
+
     translated_text = text
     if source_language.lower() != "en":
         try:
@@ -164,7 +184,12 @@ def process_text_pipeline(text: str, source_language: str) -> DocumentResponse:
                 if chunk.strip():
                     try:
                         res = translator.translate(chunk)
-                        translated_chunks.append(res if res else chunk)
+                        # Safeguard: deep-translator returns Google's 500/429 HTML error string on rate limit
+                        if res and ("That's an error" in res or "That’s all we know" in res or "Error 500" in res or "Error 429" in res):
+                            print("[AI Engine] Google Translate rate limit or server error detected. Falling back to raw chunk.")
+                            translated_chunks.append(chunk)
+                        else:
+                            translated_chunks.append(res if res else chunk)
                     except Exception as chunk_err:
                         print("Chunk Translation Error:", chunk_err)
                         translated_chunks.append(chunk)
@@ -203,7 +228,9 @@ def process_text_pipeline(text: str, source_language: str) -> DocumentResponse:
         analyzer_results=results,
         operators={
             "DEFAULT": OperatorConfig("replace", {"new_value": "<REDACTED>"}),
-            "PHONE_NUMBER": OperatorConfig("replace", {"new_value": "[PHONE_REDACTED]"})
+            "PHONE_NUMBER": OperatorConfig("replace", {"new_value": "[PHONE_REDACTED]"}),
+            "EMAIL_ADDRESS": OperatorConfig("replace", {"new_value": "[EMAIL_REDACTED]"}),
+            "CREDIT_CARD": OperatorConfig("replace", {"new_value": "[CARD_REDACTED]"}),
         }
     )
     final_text = anonymized_result.text
