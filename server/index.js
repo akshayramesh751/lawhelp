@@ -34,6 +34,7 @@ const reviewRoutes = require('./routes/reviewRoutes');
 const userRoutes = require('./routes/userRoutes');
 const aiRoutes = require('./routes/aiRoutes');
 const documentRoutes = require('./routes/documentRoutes');
+const ragRoutes = require('./routes/ragRoutes');
 
 app.get('/', (req, res) => {
   res.send('Server running on port 5000');
@@ -46,6 +47,7 @@ app.use('/api/reviews', reviewRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/ai', aiRoutes);
 app.use('/api/documents', documentRoutes);
+app.use('/api/rag', ragRoutes);
 
 const PORT = process.env.PORT || 5000;
 

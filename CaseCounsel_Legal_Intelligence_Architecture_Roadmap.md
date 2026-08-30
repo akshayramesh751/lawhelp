@@ -312,44 +312,52 @@ interface IDocumentSummary {
 ### Phase 5: Dual-Path Clause Analysis (Deterministic Rules + Grounded LLM)
 Every segmented clause is processed through an automated routing split:
 
-```
-                                  +---------------------------------------+
++---------------------------------------+
                                   |            ISOLATED CLAUSE            |
                                   +---------------------------------------+
                                                       |
                                                       v
                                   +---------------------------------------+
                                   |        TAXONOMY CLASSIFICATION        |
+                                  |  (e.g., Notice Period, Non-Compete)   |
                                   +---------------------------------------+
                                                       |
                                                       v
-                         +---------------------------------------------------------+
-                         |       Is this governed by a deterministic rule?         |
-                         +---------------------------------------------------------+
-                                         /                         \
-                                        /                           \
-                                      YES                            NO
-                                      /                               \
-                                     v                                 v
-        +-----------------------------------------+       +-----------------------------------------+
-        |         DETERMINISTIC RULE ENGINE       |       |        GROUNDED LLM REASONING           |
-        | - Minimum Age Verification              |       | - Restraint of Trade (Section 27 ICA)   |
-        | - Maximum Notice Period Caps            |       | - Reasonable Liquidated Damages         |
-        | - Statutory Gratuity Minimums           |       | - Non-Solicitation Enforceability       |
-        | - Maternity Benefit Duration            |       | - Unilateral Dispute Resolution         |
-        +-----------------------------------------+       +-----------------------------------------+
-                                     \                                 /
-                                      \                               /
-                                       v                             v
                                   +---------------------------------------+
-                                  |        STRICT CITATION AUDIT          |
+                                  |   Quantitative / Exact Statute Match? |
+                                  +---------------------------------------+
+                                                 /         \
+                                                /           \
+                                       [ YES ] /             \ [ NO ]
+                                              /               \
+                                             v                 v
+                 +--------------------------------+   +--------------------------------+
+                 |    DETERMINISTIC RULE ENGINE   |   |     GROUNDED LLM REASONING     |
+                 +--------------------------------+   +--------------------------------+
+                 | • Minimum Age Verification     |   | • Restraint of Trade (§ 27 ICA)|
+                 | • Statutory Notice Caps        |   | • Reasonable Liquidated Damages|
+                 | • Gratuity Eligibility Rules   |   | • Non-Solicitation Enforceability|
+                 | • Maternity Benefit Limits     |   | • Unilateral Dispute Resolution|
+                 +--------------------------------+   +--------------------------------+
+                                              \               /
+                                               \             /
+                                                \           /
+                                                 v         v
+                                  +---------------------------------------+
+                                  |         STRICT CITATION AUDIT         |
+                                  |   (Source Cross-Check & Verification) |
                                   +---------------------------------------+
                                                       |
                                                       v
                                   +---------------------------------------+
                                   |          FINAL RISK DECISION          |
+                                  | (🔴 High | 🟠 Review | 🟢 Compliant)  |
                                   +---------------------------------------+
-```
+5.1 Route A: Deterministic Rule Engine
+For clauses governed by explicit statutory limits, execution bypasses the LLM completely to eliminate probabilistic variance, lower API costs, and guarantee sub-millisecond execution:Numerical Boundary Evaluation: Direct programmatic assertions (e.g., validating employee age $\ge 18$, or comparing contractual notice against statutory maximums under Section 39 of the Karnataka Shops and Commercial Establishments Act).Deterministic Tagging: Generates a binary pass/fail payload with hardcoded statutory references.
+5.2 Route B: Grounded LLM Reasoning Engine
+For qualitative covenants and ambiguous legal phrasing, the system invokes an LLM strictly bounded by isolated prompt scaffolding:Negative Constraints: Strictly prohibited from using unretrieved legal assumptions or general knowledge.Citation Grounding: Requires exact reference mappings to the retrieved Act, Chapter, Section, or Court Ratio.Automatic Fallback: If the hybrid retrieval layer fails to return an authoritative primary source, the model is instructed to output:"Insufficient verified legal authority retrieved."5.3 Step 5.3: Citation Audit & Severity Calibration
+Both execution routes funnel into an automated verification filter:  Validates that all statutory citations match known records in the legal knowledge base.  Maps findings to the 5-tier risk matrix (🔴 High Risk, 🟠 Potentially Unenforceable, 🟡 Requires Review, 🔵 One-Sided, 🟢 No Issue Detected).  Emits an audit-compliant JSON record to the persistent database ledger.
 
 #### Grounding Constraints for LLM Reasoning
 When an LLM call is executed for qualitative clauses, the system prompt strictly enforces:

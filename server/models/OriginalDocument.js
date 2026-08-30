@@ -7,6 +7,12 @@ const OriginalDocumentSchema = new mongoose.Schema({
     index: true,
     description: 'UUID grouping files uploaded together (multi-image aggregation).'
   },
+  userId: {
+    type: String,
+    required: true,
+    index: true,
+    description: 'Firebase UID of the user who uploaded the document.'
+  },
   fileName: {
     type: String,
     required: true

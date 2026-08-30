@@ -107,9 +107,34 @@ const deleteFromS3 = async (s3Key) => {
   }
 };
 
+/**
+ * Downloads a file buffer from S3 (or local disk in fallback mode)
+ * @param {string} s3Key 
+ * @returns {Promise<Buffer>} The file buffer
+ */
+const downloadFromS3 = async (s3Key) => {
+  if (isS3Configured) {
+    const command = new GetObjectCommand({
+      Bucket: bucketName,
+      Key: s3Key
+    });
+    const response = await s3Client.send(command);
+    
+    const chunks = [];
+    for await (const chunk of response.Body) {
+      chunks.push(chunk);
+    }
+    return Buffer.concat(chunks);
+  } else {
+    const localPath = path.join(__dirname, '../uploads', path.basename(s3Key));
+    return await fs.promises.readFile(localPath);
+  }
+};
+
 module.exports = {
   isS3Configured,
   uploadToS3,
   getPresignedUrl,
-  deleteFromS3
+  deleteFromS3,
+  downloadFromS3
 };
