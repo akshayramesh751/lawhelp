@@ -6,3 +6,14 @@ ngrok.exe
 .DS_Store
 *.log
 .env
+.env.*
+
+# Python Cache & Artifacts
+__pycache__/
+*.pyc
+ai-service/__pycache__/
+
+# Scratch / Local logs
+errors occured.txt
+errors occurred.txt
+scratch/test_live_chat_models.py
