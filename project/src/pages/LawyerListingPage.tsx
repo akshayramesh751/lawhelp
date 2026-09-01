@@ -25,20 +25,47 @@ export interface Lawyer {
 
 interface LawyerListingPageProps {
   searchQuery?: string;
-  onNavigate: (page: string, data?: { lawyerId?: number }) => void;
+  initialDomain?: string;
+  initialSpecialization?: string;
+  onNavigate: (page: string, data?: { lawyerId?: number | string }) => void;
 }
+
+const mapDomainToSpecialization = (domain?: string): string[] => {
+  if (!domain) return [];
+  const d = domain.toLowerCase();
+  if (d.includes('employ') || d.includes('job') || d.includes('labour') || d.includes('work')) {
+    return ['Employment'];
+  }
+  if (d.includes('rent') || d.includes('lease') || d.includes('tenan') || d.includes('sale deed') || d.includes('property')) {
+    return ['Property Law'];
+  }
+  if (d.includes('nda') || d.includes('confidential') || d.includes('vendor') || d.includes('service') || d.includes('contract') || d.includes('commercial')) {
+    return ['Labour Law', 'Employment'];
+  }
+  if (d.includes('family') || d.includes('divorce')) {
+    return ['Family Law'];
+  }
+  if (d.includes('consumer')) {
+    return ['Consumer Law'];
+  }
+  return ['Employment'];
+};
 
 export default function LawyerListingPage({
   searchQuery = "",
+  initialDomain = "",
+  initialSpecialization = "",
   onNavigate,
 }: LawyerListingPageProps) {
   const [detectedCategory, setDetectedCategory] = useState<string | null>(null);
   const [priceRange, setPriceRange] = useState([0, 5000]);
   const [selectedCity, setSelectedCity] = useState("All");
   const [minRating, setMinRating] = useState(0);
-  const [selectedSpecializations, setSelectedSpecializations] = useState<
-    string[]
-  >([]);
+  const [selectedSpecializations, setSelectedSpecializations] = useState<string[]>(() => {
+    if (initialSpecialization) return [initialSpecialization];
+    if (initialDomain) return mapDomainToSpecialization(initialDomain);
+    return [];
+  });
   const [filteredLawyers, setFilteredLawyers] = useState<Lawyer[]>([]);
   const [showFilters, setShowFilters] = useState(true);
 
@@ -55,6 +82,15 @@ export default function LawyerListingPage({
     "Service Law",
     "Financial Fraud",
   ];
+
+  useEffect(() => {
+    if (initialSpecialization) {
+      setSelectedSpecializations([initialSpecialization]);
+    } else if (initialDomain) {
+      const mapped = mapDomainToSpecialization(initialDomain);
+      if (mapped.length > 0) setSelectedSpecializations(mapped);
+    }
+  }, [initialDomain, initialSpecialization]);
 
   useEffect(() => {
     if (searchQuery) {

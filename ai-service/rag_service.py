@@ -1,9 +1,29 @@
 import os
 import re
+from typing import Optional, List, Dict, Any
 import chromadb
 from chromadb.config import Settings
 from sentence_transformers import SentenceTransformer
 from rank_bm25 import BM25Okapi
+
+def map_contract_domain_to_rag_domain(domain: Optional[str]) -> Optional[str]:
+    """Normalizes arbitrary contract classification domain names into strict ChromaDB legal domain tags."""
+    if not domain:
+        return None
+    d = domain.lower()
+    if any(k in d for k in ["rent", "lease", "tenan", "property", "sale deed"]):
+        return "Leases"
+    if any(k in d for k in ["employ", "labour", "job", "service agreement", "workman"]):
+        return "Employment"
+    if any(k in d for k in ["nda", "confidential", "trade secret", "non-disclosure"]):
+        return "NDAs"
+    if any(k in d for k in ["vendor", "commercial", "msa", "sale of goods", "supply"]):
+        return "Contracts"
+    if any(k in d for k in ["benefit", "gratuity", "provident", "pf", "pension"]):
+        return "Statutory Benefits"
+    if domain in ["Employment", "Leases", "NDAs", "Contracts", "Statutory Benefits"]:
+        return domain
+    return None
 
 class LegalRAGStore:
     def __init__(self, db_dir="./chroma_db"):
@@ -99,14 +119,15 @@ class LegalRAGStore:
         re-ranking matches using Reciprocal Rank Fusion (RRF).
         """
         query_vector = self.embedding_model.encode(query).tolist()
+        rag_domain = map_contract_domain_to_rag_domain(domain)
         
         # Build strict metadata filter for Chroma
         # e.g., {'$and': [{'country': 'India'}, {'domain': 'Employment'}]}
         filters = []
         if country:
             filters.append({"country": country})
-        if domain:
-            filters.append({"domain": domain})
+        if rag_domain:
+            filters.append({"domain": rag_domain})
             
         where_filter = {"$and": filters} if len(filters) > 1 else (filters[0] if filters else None)
         
@@ -130,11 +151,18 @@ class LegalRAGStore:
                 state_filters.append({"state": state})
                 state_where = {"$and": state_filters}
                 
-            res = collection.query(
-                query_embeddings=[query_vector],
-                n_results=10,
-                where=state_where
-            )
+            try:
+                res = collection.query(
+                    query_embeddings=[query_vector],
+                    n_results=10,
+                    where=state_where
+                )
+            except Exception as e:
+                # If filtered query returns empty/error, try with broader collection
+                res = collection.query(
+                    query_embeddings=[query_vector],
+                    n_results=10
+                )
             
             if res["documents"] and res["documents"][0]:
                 for idx in range(len(res["documents"][0])):
@@ -171,13 +199,13 @@ class LegalRAGStore:
                 # Match Country
                 if country and meta.get("country") != country:
                     continue
-                # Match Domain
-                if domain and meta.get("domain") != domain:
+                # Match Domain (Strict Domain Isolation)
+                if rag_domain and meta.get("domain") != rag_domain:
                     continue
-                # Match State for state-specific indexes
-                if col_name in ["state_laws", "rules_regulations"] and state:
-                    if meta.get("state") != state:
-                        continue
+                # Match State for state collections
+                if col_name in ["state_laws", "rules_regulations"] and state and meta.get("state") != state:
+                    continue
+                    
                 filtered_indices.append(idx)
                 filtered_docs.append(doc)
                 

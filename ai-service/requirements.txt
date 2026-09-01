@@ -7,9 +7,9 @@ spacy
 deep-translator
 PyMuPDF
 python-multipart
-
-# The following are commented out because they require heavy installation (PyTorch). 
-# Uncomment these when you are ready to download the full IndicTrans2 AI models.
-# torch
-# transformers
-# sentencepiece
+chromadb
+sentence-transformers
+rank-bm25
+groq
+google-genai
+python-dotenv

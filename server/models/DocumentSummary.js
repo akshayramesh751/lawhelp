@@ -95,7 +95,8 @@ const DocumentSummarySchema = new mongoose.Schema({
       precedentCitation: { type: String },
       authorityLevel: {
         type: String,
-        enum: ['STATUTE', 'STATE_RULE', 'NOTIFICATION', 'HIGH_COURT', 'SUPREME_COURT']
+        enum: ['STATUTE', 'STATE_RULE', 'NOTIFICATION', 'HIGH_COURT', 'SUPREME_COURT', 'N/A', 'NONE'],
+        default: 'N/A'
       }
     },
     deterministicRuleTriggered: { type: Boolean, default: false },

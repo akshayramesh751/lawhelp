@@ -8,11 +8,11 @@ process.env.NODE_ENV = 'test';
 dotenv.config({ path: './server/.env' });
 
 const express = require('express');
-const connectDB = require('./server/utils/db');
-const aiRoutes = require('./server/routes/aiRoutes');
+const connectDB = require('../server/utils/db');
+const aiRoutes = require('../server/routes/aiRoutes');
 
-const DocumentSummary = require('./server/models/DocumentSummary');
-const OriginalDocument = require('./server/models/OriginalDocument');
+const DocumentSummary = require('../server/models/DocumentSummary');
+const OriginalDocument = require('../server/models/OriginalDocument');
 
 async function testRelations() {
   console.log('=== Test 2: MongoDB Persistence & Relational Linkage ===\n');

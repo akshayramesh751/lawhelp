@@ -12,6 +12,9 @@ from presidio_anonymizer.entities import OperatorConfig
 from classifier import legal_classifier
 from rag_service import rag_store
 from legal_chunker import chunk_legal_text
+from clause_analyzer import analyze_all_clauses
+from summarizer import summarize_document
+from chat_service import answer_document_query
 
 app = FastAPI(title="NyayaConnect AI Engine")
 
@@ -62,6 +65,8 @@ class DocumentResponse(BaseModel):
     pii_entities: list[dict]
     structure: LegalStructure
     classification: dict
+    risk_analysis: list[dict] = []
+    summary_output: dict = {}
 
 @app.post("/process-document", response_model=DocumentResponse)
 async def process_document(request: DocumentRequest):
@@ -139,10 +144,8 @@ def parse_legal_structure(text: str):
             "address": address
         })
         
-    if not parties:
-        # Fallback default parties if none parsed
-        parties.append({"name": "Rajesh Kumar Sharma", "role": "Lessor/Owner"})
-        parties.append({"name": "Ananya Priyadarshini Iyer", "role": "Lessee/Tenant"})
+    # Remove fake placeholder parties: only keep legitimately parsed parties
+    # (If none parsed, parties remains empty list [])
 
     # 3. Parse Clauses (Legal boundary parser)
     clause_matches = list(re.finditer(r'\n\s*(\d+)\.\s+([A-Z\s,]{3,40})\b', text))
@@ -155,30 +158,41 @@ def parse_legal_structure(text: str):
         clause_num = int(match.group(1))
         clause_header = match.group(2).strip().split('\n')[0].strip()
         clause_text = text[start:end].strip()
+        header_lower = clause_header.lower()
+        text_lower = clause_text.lower()
         
-        detected_type = "Boilerplate"
-        if "rent" in clause_header.lower() or "financial" in clause_header.lower() or "deposit" in clause_header.lower() or "payment" in clause_header.lower():
-            detected_type = "Financial"
-        elif "premises" in clause_header.lower() or "property" in clause_header.lower():
-            detected_type = "Premises/Property"
-        elif "parties" in clause_header.lower():
-            detected_type = "Parties"
-        elif "term" in clause_header.lower() or "tenure" in clause_header.lower() or "duration" in clause_header.lower():
-            detected_type = "Term/Tenure"
-        elif "termination" in clause_header.lower() or "cancellation" in clause_header.lower():
-            detected_type = "Termination"
-        elif "dispute" in clause_header.lower() or "governing" in clause_header.lower() or "jurisdiction" in clause_header.lower():
-            detected_type = "Governing Law / Disputes"
+        # Granular Semantic Clause Taxonomy
+        detected_type = "General Covenants"
+        if any(k in header_lower for k in ["rent", "financial", "deposit", "payment", "maintenance", "salary", "fee"]):
+            detected_type = "Financial & Consideration Schedules"
+        elif any(k in header_lower for k in ["premises", "property", "demised", "apartment", "flat"]):
+            detected_type = "Premises / Demised Property"
+        elif any(k in header_lower for k in ["emergency", "contact", "phone", "address"]):
+            detected_type = "Administrative / Contact Information"
+        elif any(k in header_lower for k in ["vehicle", "parking", "car", "scooter"]):
+            detected_type = "Premises Use / Parking Permission"
+        elif any(k in header_lower for k in ["witness", "signature", "signed", "attest", "execution"]):
+            detected_type = "Execution & Attestation"
+        elif any(k in header_lower for k in ["parties", "between", "lessor", "lessee"]):
+            detected_type = "Parties & Recitals"
+        elif any(k in header_lower for k in ["term", "tenure", "duration", "period"]):
+            detected_type = "Term & Tenure"
+        elif any(k in header_lower for k in ["termination", "cancellation", "notice"]):
+            detected_type = "Termination & Notice"
+        elif any(k in header_lower for k in ["confidential", "proprietary", "secrecy", "nda"]):
+            detected_type = "Confidentiality & Non-Disclosure"
+        elif any(k in header_lower for k in ["dispute", "governing", "jurisdiction", "court"]):
+            detected_type = "Governing Law & Disputes"
             
         state = None
-        if "karnataka" in clause_text.lower() or "bengaluru" in clause_text.lower() or "bangalore" in clause_text.lower():
+        if "karnataka" in text_lower or "bengaluru" in text_lower or "bangalore" in text_lower:
             state = "Karnataka"
-        elif "telangana" in clause_text.lower() or "hyderabad" in clause_text.lower():
+        elif "telangana" in text_lower or "hyderabad" in text_lower:
             state = "Telangana"
-        elif "maharashtra" in clause_text.lower() or "mumbai" in clause_text.lower():
+        elif "maharashtra" in text_lower or "mumbai" in text_lower:
             state = "Maharashtra"
             
-        governing_law_present = "governing law" in clause_text.lower() or "jurisdiction" in clause_text.lower() or "courts" in clause_text.lower()
+        governing_law_present = "governing law" in text_lower or "jurisdiction" in text_lower or "courts" in text_lower
         
         clauses.append({
             "clauseIndex": clause_num,
@@ -450,6 +464,30 @@ def process_text_pipeline(text: str, source_language: str) -> DocumentResponse:
     # ==========================================
     classification_result = legal_classifier.classify(translated_text)
             
+    # ==========================================
+    # STAGE 5: Dual-Path Clause Analysis
+    # ==========================================
+    doc_domain = classification_result.get("domain", "General")
+    doc_state = None
+    if structure_data.get("clauses") and len(structure_data["clauses"]) > 0:
+        doc_state = structure_data["clauses"][0].get("jurisdiction", {}).get("state")
+        
+    risk_analysis_results = analyze_all_clauses(
+        clauses=structure_data.get("clauses", []),
+        domain=doc_domain,
+        state=doc_state,
+        country="India"
+    )
+
+    # ==========================================
+    # STAGE 6: Document Truth Summarization
+    # ==========================================
+    summary_output_data = summarize_document(
+        text=translated_text,
+        structure=structure_data,
+        domain=doc_domain
+    )
+
     return DocumentResponse(
         original_length=original_length,
         raw_text=raw_text,
@@ -458,7 +496,9 @@ def process_text_pipeline(text: str, source_language: str) -> DocumentResponse:
         anonymized_text=final_text,
         pii_entities=pii_entities,
         structure=structure_data,
-        classification=classification_result
+        classification=classification_result,
+        risk_analysis=risk_analysis_results,
+        summary_output=summary_output_data
     )
 
 @app.get("/health")
@@ -485,5 +525,64 @@ async def rag_retrieve(request: RetrieveRequest):
             limit=request.limit
         )
         return results
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+class ClauseAnalysisRequest(BaseModel):
+    clauses: list[dict]
+    domain: str | None = None
+    state: str | None = None
+    country: str = "India"
+
+@app.post("/analyze-clauses")
+async def analyze_clauses_endpoint(request: ClauseAnalysisRequest):
+    try:
+        findings = analyze_all_clauses(
+            clauses=request.clauses,
+            domain=request.domain,
+            state=request.state,
+            country=request.country
+        )
+        return findings
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+class SummarizeRequest(BaseModel):
+    text: str
+    structure: dict | None = None
+    domain: str | None = "Legal Agreement"
+
+@app.post("/summarize-document")
+async def summarize_document_endpoint(request: SummarizeRequest):
+    try:
+        summary = summarize_document(
+            text=request.text,
+            structure=request.structure,
+            domain=request.domain or "Legal Agreement"
+        )
+        return summary
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+class ChatDocumentRequest(BaseModel):
+    query: str
+    doc_context: dict
+    messages: list[dict] | None = None
+    domain: str | None = None
+    state: str | None = None
+    country: str = "India"
+
+@app.post("/chat-document")
+async def chat_document_endpoint(request: ChatDocumentRequest):
+    try:
+        response = answer_document_query(
+            query=request.query,
+            doc_context=request.doc_context,
+            messages=request.messages,
+            domain=request.domain,
+            state=request.state,
+            country=request.country
+        )
+        return response
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

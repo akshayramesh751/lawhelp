@@ -41,7 +41,14 @@ function App() {
       case 'home':
         return <HomePage onNavigate={handleNavigate} />;
       case 'listing':
-        return <LawyerListingPage onNavigate={handleNavigate} searchQuery={navData?.searchQuery} />;
+        return (
+          <LawyerListingPage 
+            onNavigate={handleNavigate} 
+            searchQuery={navData?.searchQuery} 
+            initialDomain={navData?.domain} 
+            initialSpecialization={navData?.specialization} 
+          />
+        );
       case 'profile':
         return <LawyerProfilePage onNavigate={handleNavigate} lawyerId={navData?.lawyerId || 1} />;
       case 'booking-confirm':

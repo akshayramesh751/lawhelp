@@ -158,37 +158,8 @@ const extractText = async (req, res) => {
                 parties: partiesList,
                 clauses: clausesList
             },
-            summaryOutput: {
-                executiveSummary: `This is a residential rental agreement between ${primaryLessor} and ${primaryLessee}.`,
-                rights: ['Right to peaceful possession', 'Right to receive security deposit return'],
-                obligations: ['Obligation to pay rent on time', 'Obligation to maintain the premises'],
-                financialTerms: [
-                    { description: 'Monthly Rent', amount: '₹42,000/-', deadline: '5th of every month' },
-                    { description: 'Security Deposit', amount: '₹2,50,000/-', deadline: 'Paid via NEFT' }
-                ],
-                terminationConditions: ['Notice period of 1 month required by either party'],
-                deadlinesAndMilestones: ['Rent payable on or before 5th of every calendar month'],
-                governingLaw: 'Governing Law: Indian Contract Act 1872 & Jurisdiction of Bengaluru, Karnataka.'
-            },
-            riskAnalysis: [
-                {
-                    clauseIndex: 1,
-                    clauseType: 'Governing Law / Disputes',
-                    riskLevel: 'NO_ISSUE_DETECTED',
-                    finding: 'Standard governing law and jurisdiction clause.',
-                    statutoryConflict: {
-                        actName: 'Indian Contract Act',
-                        section: '28',
-                        ruleNumber: 'N/A',
-                        precedentCitation: 'N/A',
-                        authorityLevel: 'STATUTE'
-                    },
-                    deterministicRuleTriggered: false,
-                    reasoning: 'The clause designates standard Bengaluru jurisdiction, which is legally valid.',
-                    confidenceScore: 0.95,
-                    humanReviewRequired: false
-                }
-            ]
+            summaryOutput: aiResult.summary_output || {},
+            riskAnalysis: aiResult.risk_analysis || []
         });
 
         await summary.save();
@@ -199,12 +170,14 @@ const extractText = async (req, res) => {
             text: summary.textContent.redactedEnglishText,
             original_length: summary.metadata.wordCount,
             is_anonymized: true,
-            classification: {
-                domain: originalDocs[0]?.mimeType.includes('pdf') ? 'Rental Agreement' : 'Unknown',
+            classification: aiResult.classification || {
+                domain: originalDocs[0]?.mimeType.includes('pdf') ? 'Legal Agreement' : 'Unknown',
                 confidence: 0.9,
                 method: 'Tier1_ExactMatch'
             },
             structure: summary.structure,
+            summaryOutput: summary.summaryOutput,
+            riskAnalysis: summary.riskAnalysis,
             summaryId: summary._id
         });
 
@@ -426,37 +399,8 @@ const reprocessDocument = async (req, res) => {
                     parties: partiesList,
                     clauses: clausesList
                 },
-                summaryOutput: {
-                    executiveSummary: `This is a residential rental agreement between ${primaryLessor} and ${primaryLessee}.`,
-                    rights: ['Right to peaceful possession', 'Right to receive security deposit return'],
-                    obligations: ['Obligation to pay rent on time', 'Obligation to maintain the premises'],
-                    financialTerms: [
-                        { description: 'Monthly Rent', amount: '₹42,000/-', deadline: '5th of every month' },
-                        { description: 'Security Deposit', amount: '₹2,50,000/-', deadline: 'Paid via NEFT' }
-                    ],
-                    terminationConditions: ['Notice period of 1 month required by either party'],
-                    deadlinesAndMilestones: ['Rent payable on or before 5th of every calendar month'],
-                    governingLaw: 'Governing Law: Indian Contract Act 1872 & Jurisdiction of Bengaluru, Karnataka.'
-                },
-                riskAnalysis: [
-                    {
-                        clauseIndex: 1,
-                        clauseType: 'Governing Law / Disputes',
-                        riskLevel: 'NO_ISSUE_DETECTED',
-                        finding: 'Standard governing law and jurisdiction clause.',
-                        statutoryConflict: {
-                            actName: 'Indian Contract Act',
-                            section: '28',
-                            ruleNumber: 'N/A',
-                            precedentCitation: 'N/A',
-                            authorityLevel: 'STATUTE'
-                        },
-                        deterministicRuleTriggered: false,
-                        reasoning: 'The clause designates standard Bengaluru jurisdiction, which is legally valid.',
-                        confidenceScore: 0.95,
-                        humanReviewRequired: false
-                    }
-                ]
+                summaryOutput: aiResult.summary_output || {},
+                riskAnalysis: aiResult.risk_analysis || []
             },
             { new: true, upsert: true }
         );
@@ -465,12 +409,14 @@ const reprocessDocument = async (req, res) => {
             message: 'Reprocessed and cataloged successfully.',
             documentId,
             text: updatedSummary.textContent.redactedEnglishText,
-            classification: {
-                domain: docs[0]?.mimeType.includes('pdf') ? 'Rental Agreement' : 'Unknown',
+            classification: aiResult.classification || {
+                domain: docs[0]?.mimeType.includes('pdf') ? 'Legal Agreement' : 'Unknown',
                 confidence: 0.9,
                 method: 'Tier1_ExactMatch'
             },
             structure: updatedSummary.structure,
+            summaryOutput: updatedSummary.summaryOutput,
+            riskAnalysis: updatedSummary.riskAnalysis,
             summaryId: updatedSummary._id
         });
 
@@ -481,8 +427,66 @@ const reprocessDocument = async (req, res) => {
     }
 };
 
+/**
+ * Interactive Q&A chat with an analyzed legal document.
+ */
+const chatWithDocument = async (req, res) => {
+    try {
+        const { documentId } = req.params;
+        const { query, messages } = req.body;
+        const userId = req.user?.uid;
+
+        if (!userId) {
+            return res.status(401).json({ error: 'Unauthorized' });
+        }
+        if (!query || !query.trim()) {
+            return res.status(400).json({ error: 'Query is required.' });
+        }
+
+        const summary = await DocumentSummary.findOne({ originalDocumentId: documentId, userId });
+        if (!summary) {
+            return res.status(404).json({ error: 'Analyzed document summary not found for this user.' });
+        }
+
+        const docContext = {
+            textContent: summary.textContent,
+            structure: summary.structure,
+            summaryOutput: summary.summaryOutput,
+            riskAnalysis: summary.riskAnalysis
+        };
+
+        const domain = summary.structure?.clauses?.[0]?.detectedType || 'Legal Document';
+        const state = summary.structure?.clauses?.[0]?.jurisdiction?.state || null;
+
+        const chatResponse = await fetch('http://localhost:8000/chat-document', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                query,
+                doc_context: docContext,
+                messages: messages || [{ role: 'user', content: query }],
+                domain,
+                state,
+                country: 'India'
+            })
+        });
+
+        if (!chatResponse.ok) {
+            throw new Error(`AI Chat service error: ${chatResponse.statusText}`);
+        }
+
+        const chatData = await chatResponse.json();
+        return res.json(chatData);
+
+    } catch (error) {
+        console.error('[Document Chat] Error:', error);
+        return res.status(500).json({ error: 'Failed to process document chat query.', details: error.message });
+    }
+};
+
 module.exports = {
     extractText,
     getDocumentSummary,
-    reprocessDocument
+    reprocessDocument,
+    chatWithDocument
 };

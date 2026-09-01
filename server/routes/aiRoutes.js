@@ -14,5 +14,6 @@ const upload = multer({
 router.post('/extract', authMiddleware, upload.array('documents', 5), aiController.extractText);
 router.get('/summary/:documentId', authMiddleware, aiController.getDocumentSummary);
 router.post('/reprocess/:documentId', authMiddleware, aiController.reprocessDocument);
+router.post('/chat/:documentId', authMiddleware, aiController.chatWithDocument);
 
 module.exports = router;
