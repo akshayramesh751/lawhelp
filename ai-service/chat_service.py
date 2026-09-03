@@ -9,6 +9,7 @@ load_dotenv(dotenv_path=os.path.join(os.path.dirname(__file__), ".env"))
 load_dotenv(dotenv_path=os.path.join(os.path.dirname(__file__), "..", "server", ".env"))
 
 from rag_service import rag_store
+from llm_gateway import llm_gateway
 
 # Import Groq
 try:
@@ -302,22 +303,10 @@ STATUTORY RETRIEVAL KNOWLEDGE:
 {rag_text}
 """
 
-    chat_result = None
+    conversation_history = "\n".join([f"{m.get('role', 'user').upper()}: {m.get('content', '')}" for m in messages])
+    user_prompt = f"=== DOCUMENT & STATUTORY CONTEXT ===\n{context_str}\n\n=== CONVERSATION HISTORY ===\n{conversation_history}"
 
-    # Provider execution with failover
-    if provider == "gemini" and gemini_key:
-        chat_result = chat_with_gemini(messages, context_str, gemini_key)
-        if not chat_result and groq_key:
-            chat_result = chat_with_groq(messages, context_str, groq_key)
-    elif provider == "groq" and groq_key:
-        chat_result = chat_with_groq(messages, context_str, groq_key)
-        if not chat_result and gemini_key:
-            chat_result = chat_with_gemini(messages, context_str, gemini_key)
-    else:
-        if groq_key:
-            chat_result = chat_with_groq(messages, context_str, groq_key)
-        if not chat_result and gemini_key:
-            chat_result = chat_with_gemini(messages, context_str, gemini_key)
+    chat_result = llm_gateway.generate_json(CHAT_SYSTEM_PROMPT, user_prompt)
 
     if not chat_result:
         chat_result = heuristic_chat_fallback(query, doc_context, retrieved_rag, domain=domain)

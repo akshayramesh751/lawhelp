@@ -40,13 +40,16 @@ export default function Navbar({ onNavigate, user }: NavbarProps) {
               Find a Lawyer
             </button>
             <button
+              onClick={() => onNavigate("ai-analysis")}
+              className="text-gray-300 hover:text-gold transition-colors flex items-center gap-1.5"
+            >
+              AI Document Review
+            </button>
+            <button
               onClick={() => onNavigate("home")}
               className="text-gray-300 hover:text-gold transition-colors"
             >
               How It Works
-            </button>
-            <button className="text-gray-300 hover:text-gold transition-colors">
-              For Lawyers
             </button>
           </div>
 

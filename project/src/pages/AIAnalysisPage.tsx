@@ -1,9 +1,10 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   UploadCloud, FileText, FileImage, ShieldAlert, Loader2,
   AlertTriangle, CheckCircle, HelpCircle, AlertCircle, Info,
   MessageSquare, BookOpen, Scale, Sparkles, Send, Copy,
-  Check, DollarSign, Clock, Gavel, UserCheck, Shield, ArrowRight
+  Check, DollarSign, Clock, Gavel, UserCheck, Shield, ArrowRight,
+  History, Trash2, PlusCircle, RefreshCw, ChevronDown, FileCheck
 } from 'lucide-react';
 import { auth } from '../utils/firebase';
 import { MarkdownRenderer } from '../components/MarkdownRenderer';
@@ -50,18 +51,41 @@ interface ChatMessage {
   suggestedQuestions?: string[];
 }
 
+interface UserDocumentItem {
+  documentId: string;
+  fileName: string;
+  mimeType: string;
+  domain: string;
+  wordCount: number;
+  pageCount: number;
+  executiveSummarySnippet: string;
+  riskStats: {
+    highRisk: number;
+    oneSided: number;
+    requiresReview: number;
+    totalClauses: number;
+  };
+  createdAt: string;
+}
+
 export default function AIAnalysisPage({ onNavigate }: { onNavigate: (page: string, data?: any) => void }) {
   const [files, setFiles] = useState<File[]>([]);
   const [isDragging, setIsDragging] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [isRestoring, setIsRestoring] = useState(false);
   const [extractedText, setExtractedText] = useState<string>('');
   const [classification, setClassification] = useState<any>(null);
   const [documentId, setDocumentId] = useState<string>('');
+  const [documentFileName, setDocumentFileName] = useState<string>('');
   const [riskAnalysis, setRiskAnalysis] = useState<RiskAnalysisItem[]>([]);
   const [summaryOutput, setSummaryOutput] = useState<SummaryOutput | null>(null);
   const [activeTab, setActiveTab] = useState<'summary' | 'risk' | 'chat' | 'text'>('risk');
   const [copied, setCopied] = useState(false);
   const [error, setError] = useState('');
+
+  // Multi-Document History State
+  const [userDocuments, setUserDocuments] = useState<UserDocumentItem[]>([]);
+  const [isHistoryOpen, setIsHistoryOpen] = useState(false);
 
   // Chat State
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
@@ -70,6 +94,250 @@ export default function AIAnalysisPage({ onNavigate }: { onNavigate: (page: stri
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const chatBottomRef = useRef<HTMLDivElement>(null);
+
+  const getStorageKeyDoc = (uid: string) => `casecounsel_active_doc_${uid}`;
+  const getStorageKeyChat = (uid: string, docId: string) => `casecounsel_chat_${uid}_${docId}`;
+
+  // ==========================================
+  // USER-SCOPED HYDRATION ON MOUNT & AUTH CHANGE
+  // ==========================================
+  useEffect(() => {
+    let isMounted = true;
+
+    const restoreUserAnalysisState = async () => {
+      const currentUser = auth.currentUser;
+      if (!currentUser) {
+        // Clear all state when logged out to prevent residual leakage
+        setExtractedText('');
+        setClassification(null);
+        setDocumentId('');
+        setDocumentFileName('');
+        setRiskAnalysis([]);
+        setSummaryOutput(null);
+        setChatMessages([]);
+        setUserDocuments([]);
+        return;
+      }
+
+      const uid = currentUser.uid;
+
+      // 1. Instant 0ms Restore from User-Scoped Session Storage
+      const cachedActive = sessionStorage.getItem(getStorageKeyDoc(uid));
+      if (cachedActive) {
+        try {
+          const parsed = JSON.parse(cachedActive);
+          if (parsed && parsed.documentId) {
+            setDocumentId(parsed.documentId);
+            setExtractedText(parsed.text || '');
+            setClassification(parsed.classification || null);
+            setDocumentFileName(parsed.fileName || 'Contract');
+            setRiskAnalysis(parsed.riskAnalysis || []);
+            setSummaryOutput(parsed.summaryOutput || null);
+
+            // Restore chat history for this specific document
+            const cachedChat = sessionStorage.getItem(getStorageKeyChat(uid, parsed.documentId));
+            if (cachedChat) {
+              setChatMessages(JSON.parse(cachedChat));
+            } else {
+              setChatMessages([
+                {
+                  role: 'assistant',
+                  content: `Hello! I have restored your analyzed document (**${parsed.classification?.domain || 'Legal Document'}**). You can ask me any question about your contract's terms, compensation, notice periods, or legal liabilities.`,
+                  suggestedQuestions: [
+                    "What is my required termination notice period?",
+                    "Are there any restrictive non-compete clauses?",
+                    "What are my key financial compensation terms?"
+                  ]
+                }
+              ]);
+            }
+          }
+        } catch (e) {
+          console.error("Failed to parse cached active document", e);
+        }
+      }
+
+      // 2. Fetch User Documents & Latest Document from Backend
+      try {
+        setIsRestoring(true);
+        const token = await currentUser.getIdToken();
+
+        // Fetch user document history
+        const docsRes = await fetch('http://localhost:5000/api/ai/documents', {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (docsRes.ok && isMounted) {
+          const docsData = await docsRes.json();
+          setUserDocuments(docsData.documents || []);
+        }
+
+        // If no cached active document, fetch latest from database
+        if (!cachedActive) {
+          const latestRes = await fetch('http://localhost:5000/api/ai/documents/latest', {
+            headers: { 'Authorization': `Bearer ${token}` }
+          });
+          if (latestRes.ok && isMounted) {
+            const latestData = await latestRes.json();
+            if (latestData && latestData.documentId) {
+              setDocumentId(latestData.documentId);
+              setExtractedText(latestData.text || latestData.rawExtractedText || '');
+              setClassification(latestData.classification || null);
+              setDocumentFileName(latestData.fileName || 'Contract');
+              setRiskAnalysis(latestData.riskAnalysis || []);
+              setSummaryOutput(latestData.summaryOutput || null);
+
+              // Cache in session
+              sessionStorage.setItem(getStorageKeyDoc(uid), JSON.stringify({
+                documentId: latestData.documentId,
+                text: latestData.text || latestData.rawExtractedText || '',
+                classification: latestData.classification,
+                fileName: latestData.fileName,
+                riskAnalysis: latestData.riskAnalysis,
+                summaryOutput: latestData.summaryOutput
+              }));
+
+              // Initialize chat
+              const cachedChat = sessionStorage.getItem(getStorageKeyChat(uid, latestData.documentId));
+              if (cachedChat) {
+                setChatMessages(JSON.parse(cachedChat));
+              } else {
+                setChatMessages([
+                  {
+                    role: 'assistant',
+                    content: `Hello! I have retrieved your latest analyzed document (**${latestData.classification?.domain || 'Legal Document'}**). You can ask me any question about your contract's terms, compensation, notice periods, or legal liabilities.`,
+                    suggestedQuestions: [
+                      "What is my required termination notice period?",
+                      "Are there any restrictive non-compete clauses?",
+                      "What are my key financial compensation terms?"
+                    ]
+                  }
+                ]);
+              }
+            }
+          }
+        }
+      } catch (err) {
+        console.error("Error restoring user documents from cloud:", err);
+      } finally {
+        if (isMounted) setIsRestoring(false);
+      }
+    };
+
+    restoreUserAnalysisState();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [auth.currentUser]);
+
+  const saveActiveDocumentToSession = (docData: any) => {
+    const user = auth.currentUser;
+    if (!user) return;
+    sessionStorage.setItem(getStorageKeyDoc(user.uid), JSON.stringify(docData));
+  };
+
+  const handleSelectDocument = async (selectedDocId: string) => {
+    const user = auth.currentUser;
+    if (!user) return;
+
+    setIsLoading(true);
+    setIsHistoryOpen(false);
+    setError('');
+
+    try {
+      const token = await user.getIdToken();
+      const res = await fetch(`http://localhost:5000/api/ai/documents/${selectedDocId}`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to load selected document');
+
+      setDocumentId(data.documentId);
+      setExtractedText(data.anonymizedText || data.translatedText || data.rawExtractedText || '');
+      setClassification(data.classification || null);
+      setDocumentFileName(data.fileName || 'Contract');
+      setRiskAnalysis(data.riskAnalysis || []);
+      setSummaryOutput(data.summaryOutput || null);
+
+      // Cache as active
+      saveActiveDocumentToSession({
+        documentId: data.documentId,
+        text: data.anonymizedText || data.translatedText || data.rawExtractedText || '',
+        classification: data.classification,
+        fileName: data.fileName,
+        riskAnalysis: data.riskAnalysis,
+        summaryOutput: data.summaryOutput
+      });
+
+      // Restore chat
+      const cachedChat = sessionStorage.getItem(getStorageKeyChat(user.uid, data.documentId));
+      if (cachedChat) {
+        setChatMessages(JSON.parse(cachedChat));
+      } else {
+        setChatMessages([
+          {
+            role: 'assistant',
+            content: `Loaded document: **${data.classification?.domain || 'Legal Agreement'}**. What would you like to examine?`,
+            suggestedQuestions: [
+              "What are my key obligations?",
+              "Is the termination notice balanced?",
+              "What liabilities exist under this agreement?"
+            ]
+          }
+        ]);
+      }
+      setActiveTab('risk');
+    } catch (err: any) {
+      setError(err.message || 'Failed to switch document');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleStartNewUpload = () => {
+    const user = auth.currentUser;
+    if (user) {
+      sessionStorage.removeItem(getStorageKeyDoc(user.uid));
+    }
+    setFiles([]);
+    setExtractedText('');
+    setClassification(null);
+    setDocumentId('');
+    setDocumentFileName('');
+    setRiskAnalysis([]);
+    setSummaryOutput(null);
+    setChatMessages([]);
+    setError('');
+    setIsHistoryOpen(false);
+  };
+
+  const handleDeleteDocument = async (docIdToDelete: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    const user = auth.currentUser;
+    if (!user) return;
+
+    if (!window.confirm("Are you sure you want to delete this document from your history?")) return;
+
+    try {
+      const token = await user.getIdToken();
+      const res = await fetch(`http://localhost:5000/api/ai/documents/${docIdToDelete}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (!res.ok) throw new Error("Failed to delete document");
+
+      // Update history list
+      setUserDocuments(prev => prev.filter(d => d.documentId !== docIdToDelete));
+      sessionStorage.removeItem(getStorageKeyChat(user.uid, docIdToDelete));
+
+      // If active doc was deleted, reset
+      if (documentId === docIdToDelete) {
+        handleStartNewUpload();
+      }
+    } catch (err: any) {
+      alert(err.message || "Could not delete document.");
+    }
+  };
 
   const getSpecializationForDomain = (domain?: string): string => {
     if (!domain) return 'Employment';
@@ -175,14 +443,26 @@ export default function AIAnalysisPage({ onNavigate }: { onNavigate: (page: stri
         throw new Error(data.message || 'Failed to extract and analyze document');
       }
 
+      const fileName = files[0]?.name || 'Uploaded Document';
       setExtractedText(data.text || '');
       setClassification(data.classification || null);
       setDocumentId(data.documentId || '');
+      setDocumentFileName(fileName);
       setRiskAnalysis(data.riskAnalysis || []);
       setSummaryOutput(data.summaryOutput || null);
 
+      // Save to User-Scoped Session Storage
+      saveActiveDocumentToSession({
+        documentId: data.documentId,
+        text: data.text || '',
+        classification: data.classification,
+        fileName,
+        riskAnalysis: data.riskAnalysis,
+        summaryOutput: data.summaryOutput
+      });
+
       // Initialize chat with greeting
-      setChatMessages([
+      const initChat: ChatMessage[] = [
         {
           role: 'assistant',
           content: `Hello! I have analyzed your document (**${data.classification?.domain || 'Legal Document'}**). You can ask me any question about your contract's terms, compensation, notice periods, or legal liabilities.`,
@@ -192,7 +472,16 @@ export default function AIAnalysisPage({ onNavigate }: { onNavigate: (page: stri
             "What are my key financial compensation terms?"
           ]
         }
-      ]);
+      ];
+      setChatMessages(initChat);
+      sessionStorage.setItem(getStorageKeyChat(auth.currentUser.uid, data.documentId), JSON.stringify(initChat));
+
+      // Refresh user documents history in background
+      fetch('http://localhost:5000/api/ai/documents', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      }).then(r => r.json()).then(d => {
+        if (d.documents) setUserDocuments(d.documents);
+      }).catch(console.error);
 
       setActiveTab('risk');
 
@@ -207,16 +496,19 @@ export default function AIAnalysisPage({ onNavigate }: { onNavigate: (page: stri
     const queryToSend = queryText || inputQuery;
     if (!queryToSend.trim() || isChatLoading || !documentId) return;
 
+    const user = auth.currentUser;
+    if (!user) return;
+
     const userMsg: ChatMessage = { role: 'user', content: queryToSend };
-    setChatMessages(prev => [...prev, userMsg]);
+    const updatedWithUser = [...chatMessages, userMsg];
+    setChatMessages(updatedWithUser);
+    sessionStorage.setItem(getStorageKeyChat(user.uid, documentId), JSON.stringify(updatedWithUser));
+
     if (!queryText) setInputQuery('');
     setIsChatLoading(true);
 
     try {
-      if (!auth.currentUser) {
-        throw new Error('Please log in to continue asking questions.');
-      }
-      const token = await auth.currentUser.getIdToken();
+      const token = await user.getIdToken();
 
       const response = await fetch(`http://localhost:5000/api/ai/chat/${documentId}`, {
         method: 'POST',
@@ -226,7 +518,7 @@ export default function AIAnalysisPage({ onNavigate }: { onNavigate: (page: stri
         },
         body: JSON.stringify({
           query: queryToSend,
-          messages: [...chatMessages, userMsg].map(m => ({ role: m.role, content: m.content }))
+          messages: updatedWithUser.map(m => ({ role: m.role, content: m.content }))
         })
       });
 
@@ -243,14 +535,19 @@ export default function AIAnalysisPage({ onNavigate }: { onNavigate: (page: stri
         suggestedQuestions: data.suggestedQuestions
       };
 
-      setChatMessages(prev => [...prev, assistantMsg]);
+      const finalMessages = [...updatedWithUser, assistantMsg];
+      setChatMessages(finalMessages);
+      sessionStorage.setItem(getStorageKeyChat(user.uid, documentId), JSON.stringify(finalMessages));
       setTimeout(() => chatBottomRef.current?.scrollIntoView({ behavior: 'smooth' }), 100);
 
     } catch (err: any) {
-      setChatMessages(prev => [
-        ...prev,
-        { role: 'assistant', content: `⚠️ **Error:** ${err.message || 'Could not process query.'}` }
-      ]);
+      const errorMsg: ChatMessage = {
+        role: 'assistant',
+        content: `⚠️ **Error:** ${err.message || 'Could not process query.'}`
+      };
+      const finalMessages = [...updatedWithUser, errorMsg];
+      setChatMessages(finalMessages);
+      sessionStorage.setItem(getStorageKeyChat(user.uid, documentId), JSON.stringify(finalMessages));
     } finally {
       setIsChatLoading(false);
     }
@@ -301,104 +598,249 @@ export default function AIAnalysisPage({ onNavigate }: { onNavigate: (page: stri
   return (
     <div className="min-h-screen pt-24 pb-16 px-4 sm:px-6 lg:px-8 max-w-6xl mx-auto">
       {/* Page Header */}
-      <div className="mb-8 text-center">
+      <div className="mb-6 text-center">
         <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-gold/10 border border-gold/20 text-gold text-xs font-semibold uppercase tracking-wider mb-3">
           <Sparkles size={14} /> CaseCounsel AI Legal Intelligence
         </div>
-        <h1 className="text-4xl font-serif font-bold text-white mb-3">Legal Contract Analyzer & Risk Auditor</h1>
+        <h1 className="text-4xl font-serif font-bold text-white mb-2">Legal Contract Analyzer & Risk Auditor</h1>
         <p className="text-gray-400 max-w-2xl mx-auto text-sm leading-relaxed">
-          Upload any legal contract or agreement for automated regional script sanitization, PII redaction, 5-tier statutory risk matrix evaluation, and interactive legal Q&A.
+          Automated regional script sanitization, PII redaction, 5-tier statutory risk matrix evaluation, and interactive legal Q&A under Indian Law.
         </p>
       </div>
 
-      {/* Upload Dropzone Area */}
-      <div className="bg-[#0c1324] border border-white/[0.05] rounded-2xl p-6 lg:p-8 mb-8 shadow-2xl">
-        <div
-          className={`border-2 border-dashed rounded-xl p-8 flex flex-col items-center justify-center transition-all cursor-pointer text-center
-            ${isDragging ? 'border-gold bg-gold/10' : 'border-gray-700 bg-gray-800/20 hover:border-gold/50'}
-          `}
-          onDragOver={handleDragOver}
-          onDragLeave={handleDragLeave}
-          onDrop={handleDrop}
-          onClick={() => fileInputRef.current?.click()}
-        >
-          <input
-            type="file"
-            ref={fileInputRef}
-            className="hidden"
-            accept="application/pdf,image/png,image/jpeg,image/webp"
-            multiple
-            onChange={handleFileInput}
-          />
+      {/* Top Document Persistence & History Bar */}
+      {documentId && (
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between bg-[#0e162b] border border-gold/20 p-4 rounded-xl mb-6 gap-3 shadow-lg">
+          <div className="flex items-center gap-3">
+            <div className="bg-gold/10 p-2.5 rounded-lg text-gold border border-gold/20 shrink-0">
+              <FileCheck size={22} />
+            </div>
+            <div>
+              <div className="flex items-center gap-2 flex-wrap">
+                <h2 className="text-white font-bold text-sm sm:text-base truncate max-w-[240px] sm:max-w-md">{documentFileName || 'Active Document'}</h2>
+                <span className="text-[10px] bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-2 py-0.5 rounded font-semibold uppercase">Restored & Active</span>
+              </div>
+              <p className="text-gray-400 text-xs mt-0.5">
+                {classification?.domain || 'Legal Contract'} • {userDocuments.length} document{userDocuments.length === 1 ? '' : 's'} saved in your account
+              </p>
+            </div>
+          </div>
 
-          <div className="mb-3 bg-gray-800/50 p-4 rounded-full text-gold">
+          <div className="flex items-center gap-2 w-full sm:w-auto justify-end flex-wrap">
+            {userDocuments.length > 0 && (
+              <button
+                onClick={() => setIsHistoryOpen(true)}
+                className="flex items-center gap-1.5 bg-gray-800/80 hover:bg-gray-700 text-gray-200 px-3.5 py-2 rounded-lg text-xs font-semibold border border-white/[0.08] transition-all"
+              >
+                <History size={14} className="text-gold" />
+                History ({userDocuments.length})
+                <ChevronDown size={14} />
+              </button>
+            )}
+            <button
+              onClick={handleStartNewUpload}
+              className="flex items-center gap-1.5 bg-gold/10 hover:bg-gold/20 text-gold px-3.5 py-2 rounded-lg text-xs font-bold border border-gold/30 transition-all shadow-sm"
+            >
+              <PlusCircle size={14} />
+              + Upload Another
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* History Modal / Drawer */}
+      {isHistoryOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+          <div className="bg-[#0c1324] border border-gold/20 rounded-2xl max-w-2xl w-full p-6 shadow-2xl max-h-[85vh] flex flex-col">
+            <div className="flex items-center justify-between pb-4 border-b border-gray-800 mb-4">
+              <div className="flex items-center gap-2.5">
+                <History size={20} className="text-gold" />
+                <h3 className="text-lg font-bold text-white">Your Analyzed Documents</h3>
+              </div>
+              <button
+                onClick={() => setIsHistoryOpen(false)}
+                className="text-gray-400 hover:text-white text-xs font-semibold px-2.5 py-1 rounded-md bg-gray-800/50 hover:bg-gray-800"
+              >
+                Close ✕
+              </button>
+            </div>
+
+            <div className="overflow-y-auto space-y-3 flex-1 pr-1">
+              {userDocuments.length === 0 ? (
+                <p className="text-gray-400 text-center py-8 text-sm">No analyzed documents found for your account.</p>
+              ) : (
+                userDocuments.map((doc) => {
+                  const isActive = doc.documentId === documentId;
+                  return (
+                    <div
+                      key={doc.documentId}
+                      onClick={() => handleSelectDocument(doc.documentId)}
+                      className={`p-4 rounded-xl border transition-all cursor-pointer flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 ${
+                        isActive
+                          ? 'bg-gold/10 border-gold/40'
+                          : 'bg-gray-900/40 border-white/[0.05] hover:bg-gray-800/50 hover:border-gold/30'
+                      }`}
+                    >
+                      <div className="flex items-start gap-3">
+                        <FileText className={`shrink-0 mt-1 ${isActive ? 'text-gold' : 'text-gray-400'}`} size={18} />
+                        <div>
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <h4 className="text-white font-semibold text-sm">{doc.fileName}</h4>
+                            {isActive && (
+                              <span className="text-[10px] bg-gold text-navy font-bold px-1.5 py-0.2 rounded">ACTIVE</span>
+                            )}
+                          </div>
+                          <p className="text-gray-400 text-xs mt-0.5">
+                            {doc.domain} • {doc.wordCount} words • {new Date(doc.createdAt).toLocaleDateString()}
+                          </p>
+                          {doc.riskStats && (
+                            <div className="flex items-center gap-2 mt-1.5 text-[11px]">
+                              {doc.riskStats.highRisk > 0 && (
+                                <span className="text-red-400 font-semibold bg-red-500/10 px-1.5 py-0.5 rounded border border-red-500/20">
+                                  {doc.riskStats.highRisk} High Risk
+                                </span>
+                              )}
+                              {doc.riskStats.oneSided > 0 && (
+                                <span className="text-blue-400 font-semibold bg-blue-500/10 px-1.5 py-0.5 rounded border border-blue-500/20">
+                                  {doc.riskStats.oneSided} One-Sided
+                                </span>
+                              )}
+                              <span className="text-gray-400">
+                                {doc.riskStats.totalClauses} total clauses
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-2 self-end sm:self-center">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleSelectDocument(doc.documentId);
+                          }}
+                          className="text-xs bg-gold hover:bg-gold-500 text-navy font-bold px-3 py-1.5 rounded-lg transition-colors"
+                        >
+                          {isActive ? 'Viewing' : 'Open'}
+                        </button>
+                        <button
+                          onClick={(e) => handleDeleteDocument(doc.documentId, e)}
+                          title="Delete from history"
+                          className="p-1.5 text-gray-500 hover:text-red-400 transition-colors rounded hover:bg-gray-800"
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Upload Dropzone Area (Shown when no active document OR when user is uploading) */}
+      {(!documentId || files.length > 0) && (
+        <div className="bg-[#0c1324] border border-white/[0.05] rounded-2xl p-6 lg:p-8 mb-8 shadow-2xl animate-in fade-in duration-300">
+          {userDocuments.length > 0 && !documentId && (
+            <div className="mb-4 flex items-center justify-between bg-blue-950/20 border border-blue-500/20 p-3.5 rounded-xl text-xs text-blue-300">
+              <div className="flex items-center gap-2">
+                <History size={16} className="text-blue-400 shrink-0" />
+                <span>You have <strong>{userDocuments.length}</strong> previously analyzed document{userDocuments.length === 1 ? '' : 's'}.</span>
+              </div>
+              <button
+                onClick={() => handleSelectDocument(userDocuments[0].documentId)}
+                className="text-gold hover:text-gold-300 font-bold underline ml-2"
+              >
+                Load Last Document →
+              </button>
+            </div>
+          )}
+
+          <div
+            className={`border-2 border-dashed rounded-xl p-8 flex flex-col items-center justify-center transition-all cursor-pointer text-center
+              ${isDragging ? 'border-gold bg-gold/10' : 'border-gray-700 bg-gray-800/20 hover:border-gold/50'}
+            `}
+            onDragOver={handleDragOver}
+            onDragLeave={handleDragLeave}
+            onDrop={handleDrop}
+            onClick={() => fileInputRef.current?.click()}
+          >
+            <input
+              type="file"
+              ref={fileInputRef}
+              className="hidden"
+              accept="application/pdf,image/png,image/jpeg,image/webp"
+              multiple
+              onChange={handleFileInput}
+            />
+
+            <div className="mb-3 bg-gray-800/50 p-4 rounded-full text-gold">
+              {files.length > 0 ? (
+                files[0].type === 'application/pdf' ? <FileText size={36} /> : <FileImage size={36} />
+              ) : (
+                <UploadCloud size={36} />
+              )}
+            </div>
+
             {files.length > 0 ? (
-              files[0].type === 'application/pdf' ? <FileText size={36} /> : <FileImage size={36} />
+              <div>
+                {files.map((f, i) => (
+                  <div key={i} className="flex justify-between items-center text-left mb-1.5 bg-gray-900/60 px-4 py-2 rounded-lg border border-white/[0.05]">
+                    <p className="text-white font-medium text-sm truncate max-w-[250px]">{f.name}</p>
+                    <p className="text-gray-400 text-xs ml-4 font-mono">{(f.size / 1024 / 1024).toFixed(2)} MB</p>
+                  </div>
+                ))}
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setFiles([]);
+                    setError('');
+                  }}
+                  className="mt-3 text-red-400 hover:text-red-300 text-xs font-medium border border-red-400/20 bg-red-400/10 px-3.5 py-1.5 rounded-md transition-colors"
+                >
+                  Clear Selection
+                </button>
+              </div>
             ) : (
-              <UploadCloud size={36} />
+              <div>
+                <p className="text-white font-medium text-base mb-1">Drag and drop your legal agreement here</p>
+                <p className="text-gray-400 text-xs">Supports English & Regional PDF, PNG, JPG (Multi-page image aggregation)</p>
+              </div>
             )}
           </div>
 
-          {files.length > 0 ? (
-            <div>
-              {files.map((f, i) => (
-                <div key={i} className="flex justify-between items-center text-left mb-1.5 bg-gray-900/60 px-4 py-2 rounded-lg border border-white/[0.05]">
-                  <p className="text-white font-medium text-sm truncate max-w-[250px]">{f.name}</p>
-                  <p className="text-gray-400 text-xs ml-4 font-mono">{(f.size / 1024 / 1024).toFixed(2)} MB</p>
-                </div>
-              ))}
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setFiles([]);
-                  setExtractedText('');
-                  setDocumentId('');
-                  setRiskAnalysis([]);
-                  setSummaryOutput(null);
-                  setError('');
-                }}
-                className="mt-3 text-red-400 hover:text-red-300 text-xs font-medium border border-red-400/20 bg-red-400/10 px-3.5 py-1.5 rounded-md transition-colors"
-              >
-                Clear Files
-              </button>
-            </div>
-          ) : (
-            <div>
-              <p className="text-white font-medium text-base mb-1">Drag and drop your legal agreement here</p>
-              <p className="text-gray-400 text-xs">Supports English & Regional PDF, PNG, JPG (Multi-page image aggregation)</p>
+          {error && (
+            <div className="mt-4 p-4 bg-red-500/10 border border-red-500/20 rounded-lg flex items-start gap-3">
+              <ShieldAlert className="text-red-400 shrink-0 mt-0.5" size={18} />
+              <p className="text-red-400 text-sm">{error}</p>
             </div>
           )}
-        </div>
 
-        {error && (
-          <div className="mt-4 p-4 bg-red-500/10 border border-red-500/20 rounded-lg flex items-start gap-3">
-            <ShieldAlert className="text-red-400 shrink-0 mt-0.5" size={18} />
-            <p className="text-red-400 text-sm">{error}</p>
+          <div className="mt-6 flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div className="flex items-center gap-2 text-xs text-gray-400">
+              <Shield size={14} className="text-emerald-400 shrink-0" />
+              <p><strong>DPDP Act & ISO 27001 Compliant:</strong> Client-side PII redaction and 30-day automated purge active.</p>
+            </div>
+
+            <button
+              onClick={handleUpload}
+              disabled={files.length === 0 || isLoading}
+              className={`px-8 py-3 rounded-lg font-bold transition-all whitespace-nowrap flex items-center justify-center gap-2
+                ${files.length === 0 || isLoading ? 'bg-gray-700 text-gray-400 cursor-not-allowed' : 'bg-gold hover:bg-gold-500 text-navy shadow-lg shadow-gold/20'}
+              `}
+            >
+              {isLoading ? (
+                <>
+                  <Loader2 size={18} className="animate-spin" />
+                  Auditing Legal Clauses...
+                </>
+              ) : 'Run Full Legal Audit'}
+            </button>
           </div>
-        )}
-
-        <div className="mt-6 flex flex-col sm:flex-row items-center justify-between gap-4">
-          <div className="flex items-center gap-2 text-xs text-gray-400">
-            <Shield size={14} className="text-emerald-400 shrink-0" />
-            <p><strong>DPDP Act & ISO 27001 Compliant:</strong> Client-side PII redaction and 30-day automated purge active.</p>
-          </div>
-
-          <button
-            onClick={handleUpload}
-            disabled={files.length === 0 || isLoading}
-            className={`px-8 py-3 rounded-lg font-bold transition-all whitespace-nowrap flex items-center justify-center gap-2
-              ${files.length === 0 || isLoading ? 'bg-gray-700 text-gray-400 cursor-not-allowed' : 'bg-gold hover:bg-gold-500 text-navy shadow-lg shadow-gold/20'}
-            `}
-          >
-            {isLoading ? (
-              <>
-                <Loader2 size={18} className="animate-spin" />
-                Auditing Legal Clauses...
-              </>
-            ) : 'Run Full Legal Audit'}
-          </button>
         </div>
-      </div>
+      )}
 
       {/* Main Analysis Dashboard */}
       {extractedText && (

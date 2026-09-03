@@ -8,6 +8,8 @@ from dotenv import load_dotenv
 load_dotenv(dotenv_path=os.path.join(os.path.dirname(__file__), ".env"))
 load_dotenv(dotenv_path=os.path.join(os.path.dirname(__file__), "..", "server", ".env"))
 
+from llm_gateway import llm_gateway
+
 # Import Groq
 try:
     from groq import Groq
@@ -234,37 +236,11 @@ def validate_and_format_summary(data: Dict[str, Any]) -> Dict[str, Any]:
 def summarize_document(text: str, structure: Optional[Dict[str, Any]] = None, domain: str = "Legal Agreement") -> Dict[str, Any]:
     """
     Main entry point for Phase 6 Document Truth Summarization.
-    Routes to Groq or Gemini based on configuration and available keys with failover.
+    Routes through centralized LLMGateway with automatic failover and deterministic fallback.
     """
     structure = structure or {}
-    provider = os.environ.get("LLM_PROVIDER", "groq").lower().strip()
-    groq_key = os.environ.get("GROQ_API_KEY")
-    gemini_key = os.environ.get("GEMINI_API_KEY")
-    
-    # Filter out placeholder keys
-    if groq_key and ("your_groq" in groq_key or "placeholder" in groq_key):
-        groq_key = None
-    if gemini_key and ("your_gemini" in gemini_key or "placeholder" in gemini_key):
-        gemini_key = None
-
-    summary_result = None
-
-    # Preferred Provider Execution
-    if provider == "gemini" and gemini_key:
-        summary_result = summarize_with_gemini(text, gemini_key)
-        if not summary_result and groq_key:
-            print("[Summarizer] Failing over from Gemini to Groq...")
-            summary_result = summarize_with_groq(text, groq_key)
-    elif provider == "groq" and groq_key:
-        summary_result = summarize_with_groq(text, groq_key)
-        if not summary_result and gemini_key:
-            print("[Summarizer] Failing over from Groq to Gemini...")
-            summary_result = summarize_with_gemini(text, gemini_key)
-    else:
-        if groq_key:
-            summary_result = summarize_with_groq(text, groq_key)
-        if not summary_result and gemini_key:
-            summary_result = summarize_with_gemini(text, gemini_key)
+    user_prompt = f"Analyze and summarize this legal document strictly without hallucinating absent terms:\n\n{text}"
+    summary_result = llm_gateway.generate_json(SYSTEM_SUMMARIZER_PROMPT, user_prompt)
 
     # Fallback to zero-hallucination deterministic extraction
     if not summary_result:

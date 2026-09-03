@@ -277,5 +277,58 @@ class LegalRAGStore:
             
         return output
 
+    def validate_authority_strength(
+        self,
+        retrieved_contexts: List[Dict[str, Any]],
+        clause_text: str,
+        clause_type: str = "General Clause",
+        domain: Optional[str] = None
+    ) -> Dict[str, Any]:
+        """
+        Step 4 Authority Validation Gate:
+        Evaluates whether retrieved statutory provisions have strong legal applicability
+        before invoking expensive LLM reasoning.
+        """
+        text_lower = clause_text.lower()
+        red_flag_terms = ["waive", "forfeit", "indemnif", "unlimited", "penalty", "compete", "bar", "prohibit", "sole discretion", "unilateral", "without notice", "immediate effect", "hold harmless"]
+        has_red_flags = any(k in text_lower for k in red_flag_terms)
+
+        if has_red_flags:
+            return {
+                "is_authoritative": True,
+                "has_conflict_risk": True,
+                "top_act": retrieved_contexts[0].get("metadata", {}).get("act", "Statute") if retrieved_contexts else "Indian Legal Code",
+                "top_score": retrieved_contexts[0].get("rrf_score", 0.0) if retrieved_contexts else 0.0,
+                "reason": "Contractual liabilities, waivers, or restrictive covenants present in text requiring legal review."
+            }
+
+        if not retrieved_contexts:
+            return {
+                "is_authoritative": False,
+                "has_conflict_risk": False,
+                "reason": "Zero statutory provisions retrieved from Indian legal repository."
+            }
+
+        top_score = retrieved_contexts[0].get("rrf_score", 0.0)
+        top_meta = retrieved_contexts[0].get("metadata", {})
+        act_name = top_meta.get("act", "")
+
+        if top_score >= 0.02:
+            return {
+                "is_authoritative": True,
+                "has_conflict_risk": False,
+                "top_act": act_name,
+                "top_score": top_score,
+                "reason": "Authoritative legal provision matched with potential statutory compliance implication."
+            }
+
+        return {
+            "is_authoritative": False,
+            "has_conflict_risk": False,
+            "top_act": act_name,
+            "top_score": top_score,
+            "reason": "Weak legal correlation; operational clause with no statutory liability indicators."
+        }
+
 # Singleton instance
 rag_store = LegalRAGStore()

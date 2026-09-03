@@ -12,8 +12,8 @@ const authMiddleware = async (req, res, next) => {
   const token = authHeader.split(' ')[1];
 
   // Secure local testing mode bypass
-  if (process.env.NODE_ENV === 'test' && token === 'test-token-uid-123') {
-    req.user = { uid: 'test-token-uid-123', email: 'test@example.com' };
+  if (process.env.NODE_ENV === 'test' && token && token.startsWith('test-token-uid')) {
+    req.user = { uid: token, email: `${token}@example.com` };
     return next();
   }
 

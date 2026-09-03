@@ -35,6 +35,12 @@ const DocumentSummarySchema = new mongoose.Schema({
     pageCount: { type: Number, required: true },
     wordCount: { type: Number, required: true }
   },
+  classification: {
+    domain: { type: String, default: 'Legal Agreement' },
+    confidence: { type: Number, default: 0.95 },
+    method: { type: String, default: 'Hybrid-Taxonomy' },
+    detectedLanguage: { type: String, default: 'en' }
+  },
   textContent: {
     rawOcrText: { type: String, required: true },
     sanitizedRegionalText: { type: String },

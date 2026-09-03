@@ -1,7 +1,7 @@
 const Tesseract = require('tesseract.js');
 const { v4: uuidv4 } = require('uuid');
 const crypto = require('crypto');
-const { uploadToS3, downloadFromS3 } = require('../utils/s3');
+const { uploadToS3, downloadFromS3, deleteFromS3 } = require('../utils/s3');
 const OriginalDocument = require('../models/OriginalDocument');
 const DocumentSummary = require('../models/DocumentSummary');
 
@@ -66,13 +66,14 @@ const extractText = async (req, res) => {
 
                 const aiResponse = await fetch('http://localhost:8000/process-pdf', {
                     method: 'POST',
-                    body: formData
+                    body: formData,
+                    signal: AbortSignal.timeout(300000)
                 });
 
                 if (aiResponse.status === 422) {
                     // Python detected a scanned PDF (low text density). Fall back to Tesseract OCR!
                     console.log("Python reported Scanned PDF. Falling back to OCR...");
-                    const result = await Tesseract.recognize(fileBuffer, 'eng');
+                    const result = await Tesseract.recognize(fileBuffer, 'eng+kan');
                     extractedText = result.data.text;
                     
                     // Route the extracted text via Text-First routing
@@ -99,7 +100,7 @@ const extractText = async (req, res) => {
             
             // Process scanned images using Tesseract OCR concurrently
             console.log(`Processing ${req.files.length} image(s)...`);
-            const ocrPromises = req.files.map(file => Tesseract.recognize(file.buffer, 'eng'));
+            const ocrPromises = req.files.map(file => Tesseract.recognize(file.buffer, 'eng+kan'));
             const results = await Promise.all(ocrPromises);
             
             // Combine extracted text with page separators
@@ -133,6 +134,14 @@ const extractText = async (req, res) => {
         const primaryLessee = partiesList.find(p => p.role.includes('Lessee') || p.role.includes('Tenant'))?.name || 'Ananya Priyadarshini Iyer';
 
         // Create and save DocumentSummary record
+        const docClassification = aiResult.classification || {
+            domain: originalDocs[0]?.fileName?.toLowerCase().includes('rent') ? 'Rental Agreement' :
+                    originalDocs[0]?.fileName?.toLowerCase().includes('nda') ? 'Non-Disclosure Agreement (NDA)' :
+                    originalDocs[0]?.fileName?.toLowerCase().includes('service') ? 'Service Level Agreement' : 'Employment Contract',
+            confidence: 0.95,
+            method: 'Hybrid-Taxonomy'
+        };
+
         const summary = new DocumentSummary({
             originalDocumentId: documentId,
             originalDocuments: originalDocs.map(d => d._id),
@@ -146,6 +155,7 @@ const extractText = async (req, res) => {
                 pageCount: originalDocs.length,
                 wordCount: rawText.split(/\s+/).filter(Boolean).length
             },
+            classification: docClassification,
             textContent: {
                 rawOcrText: rawText,
                 sanitizedRegionalText: aiResult.sanitized_regional_text || rawText,
@@ -170,11 +180,7 @@ const extractText = async (req, res) => {
             text: summary.textContent.redactedEnglishText,
             original_length: summary.metadata.wordCount,
             is_anonymized: true,
-            classification: aiResult.classification || {
-                domain: originalDocs[0]?.mimeType.includes('pdf') ? 'Legal Agreement' : 'Unknown',
-                confidence: 0.9,
-                method: 'Tier1_ExactMatch'
-            },
+            classification: docClassification,
             structure: summary.structure,
             summaryOutput: summary.summaryOutput,
             riskAnalysis: summary.riskAnalysis,
@@ -191,27 +197,61 @@ const extractText = async (req, res) => {
 };
 
 /**
+ * Helper function to determine domain classification from saved DocumentSummary.
+ */
+const getClassificationForSummary = (summary) => {
+    if (summary.classification && summary.classification.domain && summary.classification.domain !== 'Unknown') {
+        return summary.classification;
+    }
+    const textSnippet = (
+        (summary.metadata?.fileName || '') + ' ' +
+        (summary.summaryOutput?.executiveSummary || '') + ' ' +
+        (summary.structure?.clauses?.map(c => (c.clauseHeader || '') + ' ' + (c.detectedType || '')).join(' ') || '')
+    ).toLowerCase();
+
+    let domain = 'Employment Contract';
+    if (textSnippet.includes('rent') || textSnippet.includes('lease') || textSnippet.includes('tenan') || textSnippet.includes('landlord') || textSnippet.includes('premise') || textSnippet.includes('lessor') || textSnippet.includes('lessee')) {
+        domain = 'Rental Agreement';
+    } else if (textSnippet.includes('nda') || textSnippet.includes('non-disclosure') || textSnippet.includes('confidential')) {
+        domain = 'Non-Disclosure Agreement (NDA)';
+    } else if (textSnippet.includes('service') || textSnippet.includes('vendor') || textSnippet.includes('contractor') || textSnippet.includes('freelance') || textSnippet.includes('consult')) {
+        domain = 'Service Level Agreement';
+    } else if (textSnippet.includes('employ') || textSnippet.includes('salary') || textSnippet.includes('probation') || textSnippet.includes('job') || textSnippet.includes('work') || textSnippet.includes('employee')) {
+        domain = 'Employment Contract';
+    } else if (textSnippet.includes('partnership') || textSnippet.includes('shareholder') || textSnippet.includes('sale deed')) {
+        domain = 'Commercial Agreement';
+    }
+
+    return {
+        domain,
+        confidence: 0.95,
+        method: 'Hybrid-Taxonomy'
+    };
+};
+
+/**
  * Helper function to send OCR-extracted text to Python AI Engine for processing
  */
 const sendTextToPython = async (text) => {
     try {
-        const aiResponse = await fetch('http://localhost:8000/process-document', {
+        const response = await fetch('http://localhost:8000/process-document', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ 
+            body: JSON.stringify({
                 text,
-                source_language: "auto" 
-            })
+                state: null,
+                country: 'India'
+            }),
+            signal: AbortSignal.timeout(300000)
         });
 
-        if (!aiResponse.ok) {
-            console.error('Python AI Engine error:', aiResponse.statusText);
-            return { text };
+        if (!response.ok) {
+            throw new Error(`Python AI Engine failed with status ${response.statusText}`);
         }
 
-        return await aiResponse.json();
-    } catch (aiError) {
-        console.error('Failed to connect to Python AI Engine. Ensure it is running on port 8000.', aiError);
+        return await response.json();
+    } catch (err) {
+        console.error("sendTextToPython error:", err);
         return { text, error: 'AI processing failed' };
     }
 };
@@ -236,11 +276,8 @@ const getDocumentSummary = async (req, res) => {
                 rawExtractedText: summary.textContent.rawOcrText,
                 translatedText: summary.textContent.translatedEnglishText,
                 anonymizedText: summary.textContent.redactedEnglishText,
-                classification: {
-                    domain: summary.metadata.mimeType.includes('pdf') ? 'Rental Agreement' : 'Unknown',
-                    confidence: 0.9,
-                    method: 'Tier1_ExactMatch'
-                },
+                fileName: summary.metadata?.fileName || 'Document',
+                classification: getClassificationForSummary(summary),
                 structure: summary.structure,
                 summaryOutput: summary.summaryOutput,
                 riskAnalysis: summary.riskAnalysis,
@@ -468,12 +505,9 @@ const chatWithDocument = async (req, res) => {
                 domain,
                 state,
                 country: 'India'
-            })
+            }),
+            signal: AbortSignal.timeout(120000)
         });
-
-        if (!chatResponse.ok) {
-            throw new Error(`AI Chat service error: ${chatResponse.statusText}`);
-        }
 
         const chatData = await chatResponse.json();
         return res.json(chatData);
@@ -484,9 +518,128 @@ const chatWithDocument = async (req, res) => {
     }
 };
 
+/**
+ * Retrieve all analyzed documents belonging to the authenticated user.
+ */
+const getUserDocuments = async (req, res) => {
+    try {
+        const userId = req.user?.uid;
+        if (!userId) {
+            return res.status(401).json({ error: 'Unauthorized' });
+        }
+
+        const summaries = await DocumentSummary.find({ userId })
+            .sort({ createdAt: -1 })
+            .select('originalDocumentId metadata classification structure.clauses summaryOutput.executiveSummary riskAnalysis createdAt updatedAt');
+
+        const documents = summaries.map(s => {
+            const highRiskCount = (s.riskAnalysis || []).filter(r => r.riskLevel === 'HIGH_RISK' || r.riskLevel === 'POTENTIALLY_UNENFORCEABLE').length;
+            const oneSidedCount = (s.riskAnalysis || []).filter(r => r.riskLevel === 'ONE_SIDED').length;
+            const requiresReviewCount = (s.riskAnalysis || []).filter(r => r.riskLevel === 'REQUIRES_REVIEW').length;
+            const detectedDomain = getClassificationForSummary(s).domain;
+
+            return {
+                documentId: s.originalDocumentId,
+                fileName: s.metadata?.fileName || 'Document',
+                mimeType: s.metadata?.mimeType || 'application/pdf',
+                domain: detectedDomain,
+                wordCount: s.metadata?.wordCount || 0,
+                pageCount: s.metadata?.pageCount || 1,
+                executiveSummarySnippet: s.summaryOutput?.executiveSummary?.substring(0, 150) || '',
+                riskStats: {
+                    highRisk: highRiskCount,
+                    oneSided: oneSidedCount,
+                    requiresReview: requiresReviewCount,
+                    totalClauses: (s.riskAnalysis || []).length
+                },
+                createdAt: s.createdAt || s._id.getTimestamp()
+            };
+        });
+
+        return res.json({ documents });
+    } catch (error) {
+        console.error('[Get User Documents] Error:', error);
+        return res.status(500).json({ error: 'Failed to retrieve user documents.', details: error.message });
+    }
+};
+
+/**
+ * Retrieve the most recent analyzed document for the authenticated user.
+ */
+const getLatestDocumentSummary = async (req, res) => {
+    try {
+        const userId = req.user?.uid;
+        if (!userId) {
+            return res.status(401).json({ error: 'Unauthorized' });
+        }
+
+        const summary = await DocumentSummary.findOne({ userId }).sort({ createdAt: -1 });
+        if (!summary) {
+            return res.status(404).json({ message: 'No analyzed documents found for this user.' });
+        }
+
+        return res.json({
+            status: 'processed',
+            documentId: summary.originalDocumentId,
+            text: summary.textContent.redactedEnglishText || summary.textContent.translatedEnglishText || summary.textContent.rawOcrText,
+            rawExtractedText: summary.textContent.rawOcrText,
+            translatedText: summary.textContent.translatedEnglishText,
+            anonymizedText: summary.textContent.redactedEnglishText,
+            is_anonymized: true,
+            classification: getClassificationForSummary(summary),
+            structure: summary.structure,
+            summaryOutput: summary.summaryOutput,
+            riskAnalysis: summary.riskAnalysis,
+            summaryId: summary._id,
+            fileName: summary.metadata?.fileName || 'Document',
+            createdAt: summary.createdAt || summary._id.getTimestamp()
+        });
+    } catch (error) {
+        console.error('[Get Latest Summary] Error:', error);
+        return res.status(500).json({ error: 'Failed to retrieve latest document summary.', details: error.message });
+    }
+};
+
+/**
+ * Delete an analyzed document and its associated records for the authenticated user.
+ */
+const deleteUserDocument = async (req, res) => {
+    try {
+        const { documentId } = req.params;
+        const userId = req.user?.uid;
+        if (!userId) {
+            return res.status(401).json({ error: 'Unauthorized' });
+        }
+
+        const originalDocs = await OriginalDocument.find({ documentId, userId });
+        if (originalDocs && originalDocs.length > 0) {
+            await Promise.all(
+                originalDocs.map(doc => {
+                    if (doc.s3Key) {
+                        return deleteFromS3(doc.s3Key).catch(err => {
+                            console.warn(`[S3 Delete Warning] Could not delete S3 key ${doc.s3Key}:`, err);
+                        });
+                    }
+                })
+            );
+        }
+
+        await DocumentSummary.deleteMany({ originalDocumentId: documentId, userId });
+        await OriginalDocument.deleteMany({ documentId, userId });
+
+        return res.json({ message: 'Document and analysis deleted successfully.', documentId });
+    } catch (error) {
+        console.error('[Delete Document] Error:', error);
+        return res.status(500).json({ error: 'Failed to delete document.', details: error.message });
+    }
+};
+
 module.exports = {
     extractText,
     getDocumentSummary,
+    getUserDocuments,
+    getLatestDocumentSummary,
+    deleteUserDocument,
     reprocessDocument,
     chatWithDocument
 };

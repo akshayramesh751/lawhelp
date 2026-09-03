@@ -12,6 +12,10 @@ const upload = multer({
 
 // All AI endpoints require Firebase Token Authentication
 router.post('/extract', authMiddleware, upload.array('documents', 5), aiController.extractText);
+router.get('/documents', authMiddleware, aiController.getUserDocuments);
+router.get('/documents/latest', authMiddleware, aiController.getLatestDocumentSummary);
+router.get('/documents/:documentId', authMiddleware, aiController.getDocumentSummary);
+router.delete('/documents/:documentId', authMiddleware, aiController.deleteUserDocument);
 router.get('/summary/:documentId', authMiddleware, aiController.getDocumentSummary);
 router.post('/reprocess/:documentId', authMiddleware, aiController.reprocessDocument);
 router.post('/chat/:documentId', authMiddleware, aiController.chatWithDocument);
