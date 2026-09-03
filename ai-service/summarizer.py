@@ -43,6 +43,10 @@ CRITICAL ANTI-HALLUCINATION & GROUNDING DIRECTIVES:
 4. If an agreement does not mention termination notice or material breach, DO NOT add termination conditions. Output an empty array [] for terminationConditions.
 5. If an agreement does not contain an explicit governing law or court jurisdiction clause, set governingLaw to "Not specified in the document".
 
+REGIONAL & TRANSLATED INDIAN CONTRACT RECOGNITION:
+- For regional Indian and translated contracts (e.g., Rental/Lease, Employment, NDA, Service Agreements), identify explicit covenants, duties, utility payment responsibilities, maintenance burdens, vacating covenants, and subletting/alteration restrictions as 'obligations'.
+- Identify permissions (such as peaceful possession, quiet enjoyment, entry/inspection upon prior notice, salary/leave entitlements, and security deposit refund) as 'rights'.
+
 SCHEMA DEFINITION:
 {
   "executiveSummary": "Concise 2-3 sentence overview identifying the document type, primary executing parties, and core subject matter.",
@@ -162,18 +166,24 @@ def heuristic_fallback_summary(text: str, structure: Dict[str, Any], domain: str
                 "deadline": "As specified in agreement terms"
             })
 
-    # 2. Rights Extraction (Only if explicit rights/entitlements are written)
+    # 2. Rights Extraction (Explicit rights, permissions, and entitlements)
     rights = []
-    if any(k in text.lower() for k in ["right to", "entitled to", "permitted to", "eligible for", "shall receive"]):
-        rights_matches = re.findall(r'(?i)(?:shall\s+have\s+the\s+right\s+to|is\s+entitled\s+to|permitted\s+to|eligible\s+for|shall\s+receive)\s+([^.\n]+)', text)
-        for r in rights_matches[:3]:
-            rights.append(f"Entitlement/Right to {r.strip()}")
+    if any(k in text.lower() for k in ["right to", "entitled to", "permitted to", "eligible for", "shall receive", "quiet enjoyment", "peaceful possession", "inspect", "refund"]):
+        rights_matches = re.findall(
+            r'(?i)(?:shall\s+have\s+the\s+right\s+to|is\s+entitled\s+to|permitted\s+to|eligible\s+for|shall\s+receive|right\s+to\s+(?:enter\s+and\s+)?inspect|right\s+to\s+peaceful|right\s+to\s+full\s+refund|authorized\s+to)\s+([^.\n;]+)',
+            text
+        )
+        for r in rights_matches[:4]:
+            rights.append(f"Operational Right / Entitlement: {r.strip()}")
 
-    # 3. Obligations Extraction (Only explicit duties)
+    # 3. Obligations Extraction (Explicit duties, utilities, maintenance, and covenants)
     obligations = []
-    duty_matches = re.findall(r'(?i)(?:shall\s+(?:pay|maintain|bear|provide|keep)|must\s+(?:pay|maintain|provide))\s+([^.\n]+)', text)
-    for d in duty_matches[:3]:
-        obligations.append(f"Obligation to {d.strip()}")
+    duty_matches = re.findall(
+        r'(?i)(?:shall\s+(?:pay|maintain|bear|provide|keep|vacate|refund|return|abide|surrender)|must\s+(?:pay|maintain|provide|vacate)|responsible\s+and\s+obligated\s+for|duty\s+and\s+obligation\s+of|strictly\s+prohibited|shall\s+not\s+sublet|subletting\s+is\s+strictly\s+prohibited|is\s+the\s+affirmative\s+obligation)\s+([^.\n;]+)',
+        text
+    )
+    for d in duty_matches[:5]:
+        obligations.append(f"Affirmative Duty: {d.strip()}")
 
     # 4. Termination & Notice Extraction (Strictly if present in text)
     termination_conditions = []

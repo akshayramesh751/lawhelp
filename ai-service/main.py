@@ -337,7 +337,35 @@ def process_text_pipeline(text: str, source_language: str) -> DocumentResponse:
             "ಪ್ರೊಬೆಷನರಿ ಅವಧಿ": "Probation Period",
             "ಶಾಸನಬದ್ಧ ಸೌಲಭ್ಯಗಳು": "Statutory Benefits",
             "ನೇಮಕಾತಿ": "Appointment/Recruitment",
-            "ಕೆಲಸದಿಂದ ವಜಾ ಮಾಡುವ ಹಕ್ಕು": "Right to Dismiss/Terminate"
+            "ಕೆಲಸದಿಂದ ವಜಾ ಮಾಡುವ ಹಕ್ಕು": "Right to Dismiss/Terminate",
+            # Rights & Permissions
+            "ಮಾಲೀಕರ ಹಕ್ಕು": "Right of the Owner",
+            "ಬಾಡಿಗೆದಾರರ ಹಕ್ಕು": "Right of the Tenant",
+            "ಪರಿಶೀಲಿಸುವ ಹಕ್ಕು": "Right to enter and inspect premises upon reasonable notice",
+            "ಶಾಂತಿಯುತ ವಾಸದ ಹಕ್ಕು": "Right to peaceful possession and quiet enjoyment of premises",
+            "ಮುಂಗಡ ಹಣ ಮರುಪಾವತಿ ಹಕ್ಕು": "Right to full refund of security deposit upon vacating",
+            "ಖಾಲಿ ಮಾಡುವ ಹಕ್ಕು": "Right to terminate and vacate the premises",
+            # Obligations & Duties
+            "ಬಾಡಿಗೆದಾರರ ಕರ್ತವ್ಯ": "Affirmative Duty and Obligation of the Tenant",
+            "ಮಾಲೀಕರ ಕರ್ತವ್ಯ": "Affirmative Duty and Obligation of the Owner",
+            "ಬಾಧ್ಯತೆ": "Mandatory Obligation",
+            "ಜವಾಬ್ದಾರಿ": "shall be solely responsible and obligated for",
+            "ಬಾಡಿಗೆದಾರರದ್ದು": "shall be the affirmative obligation and duty of the Tenant",
+            "ಮಾಲೀಕರದ್ದು": "shall be the affirmative obligation and duty of the Owner",
+            "ವಿದ್ಯುತ್ ಶುಲ್ಕ": "Electricity and power utility charges",
+            "ನೀರಿನ ಶುಲ್ಕ": "Water utility charges",
+            "ನಿರ್ವಹಣಾ ಶುಲ್ಕ": "Monthly society and building maintenance charges",
+            "ಸ್ವಚ್ಛತೆ ಕಾಪಾಡುವುದು": "Shall maintain the premises in good, tenantable and clean condition",
+            "ಖಾಲಿ ಮಾಡುವುದು": "Shall vacate and surrender vacant peaceful possession",
+            "ಪಾವತಿಸುವುದು": "Shall pay on or before the due date",
+            "ಹಿಂತಿರುಗಿಸುವುದು": "Shall refund and return to the other party",
+            # Restrictive Covenants & Prohibitions
+            "ಉಪ ಬಾಡಿಗೆ ನಿಷೇಧ": "Subletting, assigning, or parting with possession is strictly prohibited",
+            "ಉಪ ಬಾಡಿಗೆ": "subletting",
+            "ಅನಧಿಕೃತ ಮಾರ್ಪಾಡು ನಿಷೇಧ": "Unauthorized structural alterations, additions, or modifications are strictly prohibited",
+            "ವಾಣಿಜ್ಯ ಬಳಕೆಯ ನಿಷೇಧ": "Using residential premises for commercial, trade, or illegal purposes is strictly prohibited",
+            "ಅಕ್ರಮ ಚಟುವಟಿಕೆ ನಿಷೇಧ": "Illegal, unlawful, or nuisance activities are strictly prohibited",
+            "ಅನಧಿಕೃತ ಮಾರ್ಪಾಡು": "Unauthorized alteration"
         }
         for k_word, e_word in kannada_map.items():
             text = text.replace(k_word, f" {e_word} ")
