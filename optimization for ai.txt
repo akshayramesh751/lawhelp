@@ -1,0 +1,671 @@
+Absolutely. Here is the **combined final optimization plan for your existing CaseCounsel architecture**, including the **safe context-aware cache**, with the exact **implementation order** I recommend.
+
+The important thing is that this does **not redesign your architecture**. It adds optimization gates around your existing Phase 4 and Phase 5 pipeline. Your existing Document Truth / Legal Truth separation, 3-tier classifier, Hybrid RAG, Deterministic Rule Engine, Grounded LLM Reasoning, and Severity Matrix remain intact. 
+
+---
+
+# Final Optimized AI Execution Architecture
+
+```text id="ny8ifn"
+                    EXISTING PIPELINE
+                           │
+                           ▼
+                  CLAUSE SEGMENTATION
+                           │
+                           ▼
+                TAXONOMY CLASSIFICATION
+                           │
+                           ▼
+             DETERMINISTIC / HEURISTIC CHECK
+                           │
+              ┌────────────┴────────────┐
+              │                         │
+        Resolved                   Ambiguous
+              │                         │
+              ▼                         ▼
+        RETURN RESULT                HYBRID RAG
+                                        │
+                                        ▼
+                              AUTHORITY VALIDATION
+                                        │
+                           ┌────────────┴────────────┐
+                           │                         │
+                     No Authority              Authority Found
+                           │                         │
+                           ▼                         ▼
+                    RETURN FALLBACK        CONTEXT-AWARE CACHE
+                                                 │
+                                      ┌──────────┴──────────┐
+                                      │                     │
+                                  CACHE HIT              CACHE MISS
+                                      │                     │
+                                      ▼                     ▼
+                                RETURN RESULT         LLM QUEUE
+                                                            │
+                                                            ▼
+                                                      BATCH BUILDER
+                                                            │
+                                                            ▼
+                                                         GEMINI
+                                                            │
+                                                            ▼
+                                                    CITATION AUDIT
+                                                            │
+                                                            ▼
+                                                     STORE IN CACHE
+                                                            │
+                                                            ▼
+                                                       FINAL RESULT
+```
+
+This fits directly into your existing **Phase 5 Dual-Path Clause Analysis** rather than replacing it. 
+
+---
+
+# Implementation Order
+
+I recommend implementing them in this order:
+
+## 🥇 Step 1 — Batch Multiple Clauses Before Gemini
+
+### Where to change
+
+**Phase 5 → Route B → Grounded LLM Reasoning**
+
+### Why implement this first?
+
+Because this directly solves your immediate problem:
+
+```text id="ykz3k5"
+Current:
+
+Clause 1 → Gemini request
+Clause 2 → Gemini request
+Clause 3 → Gemini request
+Clause 4 → Gemini request
+Clause 5 → Gemini request
+```
+
+Change it to:
+
+```text id="0k3dyh"
+Clause 1 ─┐
+Clause 2 ─┤
+Clause 3 ─┼──► Batch Builder ───► Gemini
+Clause 4 ─┤
+Clause 5 ─┘
+```
+
+### What to implement
+
+Create:
+
+```text id="18js47"
+LLMBatchBuilder
+```
+
+Input:
+
+```typescript id="h0b15x"
+{
+  clauseId,
+  clauseText,
+  clauseType,
+  relevantDocumentContext,
+  retrievedAuthorities
+}
+```
+
+Output:
+
+```text id="bjcwk1"
+One Gemini request containing multiple clauses
+```
+
+Gemini must return:
+
+```json id="nvvg05"
+{
+  "results": [
+    {
+      "clauseId": 1,
+      "riskLevel": "...",
+      "finding": "...",
+      "reasoning": "...",
+      "citations": []
+    }
+  ]
+}
+```
+
+### Expected benefit
+
+```text id="n0dx8p"
+20 clauses
+↓
+Instead of 20 requests
+↓
+Potentially 4–5 requests
+```
+
+This is the fastest improvement to your current quota problem.
+
+---
+
+# 🥈 Step 2 — Add the Context-Aware Cache Before Gemini
+
+After batching works, implement caching.
+
+### Where to change
+
+Place it:
+
+```text id="1eupg0"
+Hybrid RAG
+   ↓
+Context-Aware Cache
+   ↓
+LLM Queue / Batch Builder
+```
+
+### New flow
+
+```text id="c1z9ii"
+Clause
+  ↓
+RAG
+  ↓
+Build Complete Analysis Context
+  ↓
+Generate Cache Key
+  ↓
+Cache Hit?
+  │
+ ┌┴───────────┐
+ │            │
+Yes          No
+ │            │
+ ▼            ▼
+Return      Batch Queue
+Cached          ↓
+Result       Gemini
+                 ↓
+             Store Result
+```
+
+---
+
+## The important part: Cache key design
+
+Do **not** use:
+
+```text id="yp4pjq"
+hash(clauseText)
+```
+
+Instead:
+
+```text id="c1p4cc"
+cacheKey = SHA-256(
+    normalizedClauseText
+    + relevantDocumentContextHash
+    + clauseType
+    + documentDomain
+    + jurisdiction
+    + retrievedAuthorityHash
+    + legalKnowledgeVersion
+    + promptVersion
+)
+```
+
+### Why `relevantDocumentContextHash`?
+
+Because the same clause can have different meanings in different documents.
+
+Example:
+
+```text id="8f66u7"
+Document A:
+
+"Notice period is 30 days."
+
+Context:
+Both employer and employee follow 30 days.
+```
+
+vs:
+
+```text id="ij2ao5"
+Document B:
+
+"Notice period is 30 days."
+
+Context:
+Employer can terminate immediately.
+Employee must provide 30 days.
+```
+
+Same clause text:
+
+```text id="y4sp8z"
+"Notice period is 30 days."
+```
+
+But:
+
+```text id="slywhp"
+Different Context Hash
+```
+
+Therefore:
+
+```text id="dxohz6"
+Different Cache Key
+```
+
+Therefore:
+
+```text id="7e9omz"
+No accidental reuse
+```
+
+---
+
+## What should `relevantDocumentContext` contain?
+
+Only information that affects the clause.
+
+For example:
+
+```text id="w27q3y"
+• Referenced definitions
+• Previous/next related clauses
+• Governing law clause
+• Party roles
+• Cross-referenced sections
+```
+
+You don't necessarily need the entire document.
+
+This is important because including the entire document hash would make the cache extremely strict and greatly reduce cache hits.
+
+---
+
+# 🥉 Step 3 — Strengthen Your Existing Deterministic Rule Engine
+
+### Where to change
+
+**Phase 5 → Before Route B**
+
+Your architecture already has:
+
+```text id="nlsaqd"
+Quantitative / Exact Statute Match?
+       │
+       ├── YES → Deterministic Rule Engine
+       │
+       └── NO → Grounded LLM
+```
+
+
+
+Do not redesign it.
+
+Simply expand the routing logic:
+
+```text id="ab6tgd"
+Clause
+  ↓
+Taxonomy Classification
+  ↓
+Can deterministic logic resolve it?
+  │
+  ├── Exact statutory boundary
+  │        ↓
+  │     Rule Engine
+  │
+  ├── Structural / heuristic pattern
+  │        ↓
+  │     Direct Finding
+  │
+  └── Genuinely ambiguous
+           ↓
+         Route B
+```
+
+### Example
+
+Instead of sending this to Gemini:
+
+```text id="g6hmb2"
+Employee Notice = 90 days
+Employer Notice = 0 days
+```
+
+Your code can calculate:
+
+```text id="l0q6os"
+Notice Asymmetry = 90 days
+```
+
+and produce:
+
+```text id="xrt9xh"
+ONE_SIDED
+```
+
+The LLM is not required to detect every logical imbalance.
+
+### Expected benefit
+
+This reduces the number of clauses that even reach:
+
+```text id="bsxfs1"
+RAG → Cache → Gemini
+```
+
+Your architecture already explicitly supports deterministic bypass for exact statutory conditions, so this is an extension of the existing Route A rather than a new subsystem. 
+
+---
+
+# 4️⃣ Step 4 — Add an Authority Validation Gate After RAG
+
+### Where to change
+
+Between:
+
+```text id="z1w2x2"
+Phase 4 Hybrid RAG
+        ↓
+Phase 5 Grounded LLM
+```
+
+Your current architecture already contains an authority fallback:
+
+> `"Insufficient verified legal authority retrieved."` 
+
+The optimization is simply moving the decision **before Gemini**.
+
+### Current possible flow
+
+```text id="vpx91x"
+RAG
+ ↓
+No good authority
+ ↓
+Gemini
+ ↓
+"Insufficient verified legal authority"
+```
+
+### Optimized flow
+
+```text id="m8nh7l"
+RAG
+ ↓
+Authority Validator
+ ↓
+Authority Good?
+ │
+ ├── No
+ │     ↓
+ │  Direct Fallback
+ │
+ └── Yes
+       ↓
+   Cache / Gemini
+```
+
+### Authority validator can check
+
+```text id="f4lrlh"
+• Is at least one authoritative source retrieved?
+• Is relevance score above threshold?
+• Does jurisdiction match?
+• Does domain match?
+• Is the legal provision complete?
+```
+
+If the answer is no:
+
+```text id="s1uvg1"
+No Gemini call.
+```
+
+This fits naturally with your metadata-filtered Hybrid RAG and strict source grounding design. 
+
+---
+
+# 5️⃣ Step 5 — Add an LLM Queue and Concurrency Controller
+
+### Where to change
+
+Immediately before the Batch Builder.
+
+```text id="6n4bdu"
+Cache Miss
+    ↓
+LLM Execution Queue
+    ↓
+Batch Builder
+    ↓
+Gemini
+```
+
+Your workers should no longer directly call Gemini.
+
+Instead:
+
+```text id="9uxbld"
+Multiple Clause Workers
+         │
+         ▼
+    LLM REQUEST QUEUE
+         │
+         ▼
+    QUOTA CONTROLLER
+         │
+         ▼
+     BATCH BUILDER
+         │
+         ▼
+        GEMINI
+```
+
+For your current free quota:
+
+```text id="x3pfsw"
+MAX_CONCURRENT_REQUESTS = 1
+```
+
+Track:
+
+```text id="f8e5od"
+requestsToday
+requestsRemaining
+retryAfter
+temporaryRateLimit
+dailyQuotaExceeded
+```
+
+### Important behaviour
+
+```text id="6dgym5"
+Temporary rate limit
+        ↓
+Retry with backoff
+```
+
+But:
+
+```text id="5mhn5j"
+Daily quota exhausted
+        ↓
+Do NOT continuously retry
+        ↓
+Stop / queue / use fallback
+```
+
+This is particularly important because your architecture uses parallel asynchronous workers; without central LLM control, worker parallelism can increase request consumption and rate-limit failures. 
+
+---
+
+# Final Implementation Sequence
+
+## Phase 1 — Immediate quota reduction
+
+### Implement #1: Clause batching
+
+```text id="6a5wmp"
+Route B
+  ↓
+Batch Builder
+  ↓
+Gemini
+```
+
+**Goal:** Immediately reduce request count.
+
+---
+
+## Phase 2 — Eliminate repeated Gemini calls
+
+### Implement #2: Context-aware cache
+
+```text id="ip7yvd"
+RAG
+ ↓
+Context-aware Cache
+ ↓
+Batch Builder
+```
+
+**Goal:** Repeated clauses and equivalent contexts do not consume API quota.
+
+---
+
+## Phase 3 — Reduce clauses entering the AI path
+
+### Implement #3: Expand deterministic routing
+
+```text id="fzc4mv"
+Classification
+ ↓
+Rule / Heuristic Engine
+ ↓
+Only ambiguous clauses → RAG
+```
+
+**Goal:** Eliminate unnecessary LLM eligibility.
+
+---
+
+## Phase 4 — Stop pointless LLM calls
+
+### Implement #4: Authority validation
+
+```text id="ph6duo"
+RAG
+ ↓
+Authority Check
+ ↓
+No authority → Direct fallback
+```
+
+**Goal:** Never call Gemini merely to tell you that insufficient legal evidence exists.
+
+---
+
+## Phase 5 — Protect your API quota
+
+### Implement #5: Queue + concurrency control
+
+```text id="9is5my"
+All LLM work
+ ↓
+Queue
+ ↓
+Quota Controller
+ ↓
+Batch Builder
+ ↓
+Gemini
+```
+
+**Goal:** Prevent your workers from exhausting Gemini accidentally.
+
+---
+
+# The final optimized position inside your architecture
+
+Your existing architecture currently has:
+
+```text id="ksnn8c"
+Clause
+ ↓
+Classification
+ ↓
+Hybrid RAG
+ ↓
+Deterministic OR Gemini
+ ↓
+Citation Audit
+ ↓
+Severity Matrix
+```
+
+The optimized version becomes:
+
+```text id="6bdgpf"
+Clause
+  ↓
+Classification
+  ↓
+DETERMINISTIC / HEURISTIC ENGINE
+  │
+  ├── Resolved
+  │      ↓
+  │    Result
+  │
+  └── Ambiguous
+         ↓
+      HYBRID RAG
+         ↓
+   AUTHORITY VALIDATOR
+         │
+    ┌────┴────┐
+    │         │
+  Invalid    Valid
+    │         │
+Fallback     ↓
+         CONTEXT-AWARE CACHE
+               │
+          ┌────┴────┐
+          │         │
+         Hit       Miss
+          │         │
+       Result      ↓
+                 QUEUE
+                   ↓
+              BATCH BUILDER
+                   ↓
+                 GEMINI
+                   ↓
+              CITATION AUDIT
+                   ↓
+              SEVERITY MATRIX
+                   ↓
+              STORE IN CACHE
+```
+
+## My final recommendation on order
+
+**Implement them exactly in this order:**
+
+1. **Batch multiple clauses**
+2. **Context-aware cache**
+3. **Strengthen deterministic/heuristic filtering**
+4. **Authority validation gate**
+5. **LLM queue + concurrency control**
+
+This order gives you the fastest immediate relief from your Gemini quota issue while gradually making your existing CaseCounsel AI engine more efficient—without disturbing its core architecture.

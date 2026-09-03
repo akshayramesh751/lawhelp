@@ -1,11 +1,12 @@
 import React, { useState, useRef } from 'react';
-import { 
-  UploadCloud, FileText, FileImage, ShieldAlert, Loader2, 
-  AlertTriangle, CheckCircle, HelpCircle, AlertCircle, Info, 
-  MessageSquare, BookOpen, Scale, Sparkles, Send, Copy, 
+import {
+  UploadCloud, FileText, FileImage, ShieldAlert, Loader2,
+  AlertTriangle, CheckCircle, HelpCircle, AlertCircle, Info,
+  MessageSquare, BookOpen, Scale, Sparkles, Send, Copy,
   Check, DollarSign, Clock, Gavel, UserCheck, Shield, ArrowRight
 } from 'lucide-react';
 import { auth } from '../utils/firebase';
+import { MarkdownRenderer } from '../components/MarkdownRenderer';
 
 interface RiskAnalysisItem {
   clauseIndex: number;
@@ -179,7 +180,7 @@ export default function AIAnalysisPage({ onNavigate }: { onNavigate: (page: stri
       setDocumentId(data.documentId || '');
       setRiskAnalysis(data.riskAnalysis || []);
       setSummaryOutput(data.summaryOutput || null);
-      
+
       // Initialize chat with greeting
       setChatMessages([
         {
@@ -192,7 +193,7 @@ export default function AIAnalysisPage({ onNavigate }: { onNavigate: (page: stri
           ]
         }
       ]);
-      
+
       setActiveTab('risk');
 
     } catch (err: any) {
@@ -302,7 +303,7 @@ export default function AIAnalysisPage({ onNavigate }: { onNavigate: (page: stri
       {/* Page Header */}
       <div className="mb-8 text-center">
         <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-gold/10 border border-gold/20 text-gold text-xs font-semibold uppercase tracking-wider mb-3">
-          <Sparkles size={14} /> NyayaConnect AI Legal Intelligence
+          <Sparkles size={14} /> CaseCounsel AI Legal Intelligence
         </div>
         <h1 className="text-4xl font-serif font-bold text-white mb-3">Legal Contract Analyzer & Risk Auditor</h1>
         <p className="text-gray-400 max-w-2xl mx-auto text-sm leading-relaxed">
@@ -347,14 +348,14 @@ export default function AIAnalysisPage({ onNavigate }: { onNavigate: (page: stri
                 </div>
               ))}
               <button
-                onClick={(e) => { 
-                  e.stopPropagation(); 
-                  setFiles([]); 
-                  setExtractedText(''); 
-                  setDocumentId(''); 
-                  setRiskAnalysis([]); 
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setFiles([]);
+                  setExtractedText('');
+                  setDocumentId('');
+                  setRiskAnalysis([]);
                   setSummaryOutput(null);
-                  setError(''); 
+                  setError('');
                 }}
                 className="mt-3 text-red-400 hover:text-red-300 text-xs font-medium border border-red-400/20 bg-red-400/10 px-3.5 py-1.5 rounded-md transition-colors"
               >
@@ -402,7 +403,7 @@ export default function AIAnalysisPage({ onNavigate }: { onNavigate: (page: stri
       {/* Main Analysis Dashboard */}
       {extractedText && (
         <div className="bg-[#0c1324] border border-white/[0.05] rounded-2xl p-6 lg:p-8 shadow-2xl animate-in fade-in slide-in-from-bottom-4 duration-500">
-          
+
           {/* Classification & Metadata Header Banner */}
           <div className="mb-6 flex flex-col md:flex-row items-start md:items-center justify-between bg-gradient-to-r from-navy-800 to-[#101b33] border border-gold/20 p-5 rounded-xl gap-4">
             <div>
@@ -441,33 +442,29 @@ export default function AIAnalysisPage({ onNavigate }: { onNavigate: (page: stri
           <div className="flex items-center gap-2 border-b border-gray-800 pb-3 mb-6 overflow-x-auto">
             <button
               onClick={() => setActiveTab('risk')}
-              className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all whitespace-nowrap ${
-                activeTab === 'risk' ? 'bg-gold text-navy shadow-md' : 'text-gray-400 hover:text-white hover:bg-gray-800/40'
-              }`}
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all whitespace-nowrap ${activeTab === 'risk' ? 'bg-gold text-navy shadow-md' : 'text-gray-400 hover:text-white hover:bg-gray-800/40'
+                }`}
             >
               <Scale size={16} /> 5-Tier Risk Matrix ({riskAnalysis.length})
             </button>
             <button
               onClick={() => setActiveTab('summary')}
-              className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all whitespace-nowrap ${
-                activeTab === 'summary' ? 'bg-gold text-navy shadow-md' : 'text-gray-400 hover:text-white hover:bg-gray-800/40'
-              }`}
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all whitespace-nowrap ${activeTab === 'summary' ? 'bg-gold text-navy shadow-md' : 'text-gray-400 hover:text-white hover:bg-gray-800/40'
+                }`}
             >
               <BookOpen size={16} /> Document Truth Summary
             </button>
             <button
               onClick={() => setActiveTab('chat')}
-              className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all whitespace-nowrap ${
-                activeTab === 'chat' ? 'bg-gold text-navy shadow-md' : 'text-gray-400 hover:text-white hover:bg-gray-800/40'
-              }`}
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all whitespace-nowrap ${activeTab === 'chat' ? 'bg-gold text-navy shadow-md' : 'text-gray-400 hover:text-white hover:bg-gray-800/40'
+                }`}
             >
               <MessageSquare size={16} /> Interactive Legal Q&A
             </button>
             <button
               onClick={() => setActiveTab('text')}
-              className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all whitespace-nowrap ${
-                activeTab === 'text' ? 'bg-gold text-navy shadow-md' : 'text-gray-400 hover:text-white hover:bg-gray-800/40'
-              }`}
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all whitespace-nowrap ${activeTab === 'text' ? 'bg-gold text-navy shadow-md' : 'text-gray-400 hover:text-white hover:bg-gray-800/40'
+                }`}
             >
               <FileText size={16} /> Redacted Document Text
             </button>
@@ -491,13 +488,12 @@ export default function AIAnalysisPage({ onNavigate }: { onNavigate: (page: stri
                 riskAnalysis.map((item, idx) => {
                   const badge = getRiskBadge(item.riskLevel);
                   return (
-                    <div 
-                      key={idx} 
-                      className={`p-5 rounded-xl border transition-all ${
-                        item.riskLevel === 'HIGH_RISK' ? 'bg-red-950/10 border-red-500/30 hover:border-red-500/50' :
-                        item.riskLevel === 'ONE_SIDED' ? 'bg-blue-950/10 border-blue-500/30 hover:border-blue-500/50' :
-                        'bg-gray-900/40 border-white/[0.05] hover:border-white/[0.1]'
-                      }`}
+                    <div
+                      key={idx}
+                      className={`p-5 rounded-xl border transition-all ${item.riskLevel === 'HIGH_RISK' ? 'bg-red-950/10 border-red-500/30 hover:border-red-500/50' :
+                          item.riskLevel === 'ONE_SIDED' ? 'bg-blue-950/10 border-blue-500/30 hover:border-blue-500/50' :
+                            'bg-gray-900/40 border-white/[0.05] hover:border-white/[0.1]'
+                        }`}
                     >
                       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3">
                         <div className="flex items-center gap-2">
@@ -687,18 +683,17 @@ export default function AIAnalysisPage({ onNavigate }: { onNavigate: (page: stri
               {/* Chat Message Scroll Area */}
               <div className="flex-1 p-4 overflow-y-auto space-y-4">
                 {chatMessages.map((msg, idx) => (
-                  <div 
-                    key={idx} 
+                  <div
+                    key={idx}
                     className={`flex flex-col ${msg.role === 'user' ? 'items-end' : 'items-start'}`}
                   >
-                    <div 
-                      className={`max-w-[85%] rounded-2xl p-4 text-sm leading-relaxed ${
-                        msg.role === 'user' 
-                          ? 'bg-gold text-navy font-medium rounded-br-none shadow-md' 
+                    <div
+                      className={`max-w-[85%] rounded-2xl p-4 text-sm leading-relaxed ${msg.role === 'user'
+                          ? 'bg-gold text-navy font-medium rounded-br-none shadow-md'
                           : 'bg-[#101b33] text-gray-200 border border-white/[0.05] rounded-bl-none shadow-lg'
-                      }`}
+                        }`}
                     >
-                      <p className="whitespace-pre-wrap">{msg.content}</p>
+                      <MarkdownRenderer content={msg.content} isUser={msg.role === 'user'} />
 
                       {/* Citations Pill on Assistant Message */}
                       {msg.citations && msg.citations.length > 0 && (
@@ -752,9 +747,8 @@ export default function AIAnalysisPage({ onNavigate }: { onNavigate: (page: stri
                 <button
                   onClick={() => handleSendChat()}
                   disabled={!inputQuery.trim() || isChatLoading}
-                  className={`p-2.5 rounded-lg transition-all ${
-                    !inputQuery.trim() || isChatLoading ? 'bg-gray-800 text-gray-500 cursor-not-allowed' : 'bg-gold text-navy hover:bg-gold-500'
-                  }`}
+                  className={`p-2.5 rounded-lg transition-all ${!inputQuery.trim() || isChatLoading ? 'bg-gray-800 text-gray-500 cursor-not-allowed' : 'bg-gold text-navy hover:bg-gold-500'
+                    }`}
                 >
                   <Send size={18} />
                 </button>

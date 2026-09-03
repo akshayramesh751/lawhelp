@@ -46,9 +46,14 @@ STRICT 3-TIER EVIDENCE GATING DIRECTIVES:
    NEVER pretend or infer that an absent clause exists in the agreement.
 
 3. MODE 3 — EXTERNAL LEGAL GUIDANCE (DOMAIN-MATCHED ONLY):
-   If relevant, explain what external Indian statutory law provides in the absence of a contract clause, but STRICTLY SEPARATE IT from the contract and ensure the statute matches the legal domain (e.g., Transfer of Property Act for leases, Karnataka Shops Act for employment).
+   If relevant, explain what external Indian statutory law provides in the absence of a contract clause, but STRICTLY SEPARATE IT from the contract and ensure the statute matches the legal domain (e.g., Transfer of Property Act for leases, Industrial Disputes / Contract Act for employment).
 
-4. Format your final response strictly as a JSON object adhering to this schema:
+PRESENTATION & FORMATTING GUIDELINES:
+- Structure your response cleanly with markdown headings (###), bullet points, and **bold** highlights.
+- Keep the tone professional, structured, and easy to read.
+- Avoid messy repetitive divider characters like long rows of hashes or dashes.
+
+Format your final response strictly as a JSON object adhering to this schema:
 {
   "reply": "Clear, markdown-formatted plain English response adhering to the 3-tier evidence rules.",
   "relevantClauses": [1, 2],
@@ -66,25 +71,29 @@ STRICT 3-TIER EVIDENCE GATING DIRECTIVES:
 def chat_with_groq(messages: List[Dict[str, str]], context_str: str, api_key: str) -> Optional[Dict[str, Any]]:
     if not HAS_GROQ or not api_key:
         return None
-    try:
-        client = Groq(api_key=api_key)
-        formatted_messages = [
-            {"role": "system", "content": f"{CHAT_SYSTEM_PROMPT}\n\n=== DOCUMENT & STATUTORY CONTEXT ===\n{context_str}"}
-        ]
-        for m in messages:
-            formatted_messages.append({"role": m.get("role", "user"), "content": m.get("content", "")})
-            
-        completion = client.chat.completions.create(
-            model="openai/gpt-oss-120b",
-            messages=formatted_messages,
-            temperature=0.0,
-            response_format={"type": "json_object"}
-        )
-        raw = completion.choices[0].message.content
-        return json.loads(raw)
-    except Exception as e:
-        print(f"[ChatService] Groq execution error: {e}")
-        return None
+    models_to_try = ["openai/gpt-oss-120b", "qwen/qwen3.6-27b", "openai/gpt-oss-20b"]
+    client = Groq(api_key=api_key)
+    formatted_messages = [
+        {"role": "system", "content": f"{CHAT_SYSTEM_PROMPT}\n\n=== DOCUMENT & STATUTORY CONTEXT ===\n{context_str}"}
+    ]
+    for m in messages:
+        formatted_messages.append({"role": m.get("role", "user"), "content": m.get("content", "")})
+        
+    for model_name in models_to_try:
+        try:
+            completion = client.chat.completions.create(
+                model=model_name,
+                messages=formatted_messages,
+                temperature=0.0,
+                response_format={"type": "json_object"}
+            )
+            raw = completion.choices[0].message.content
+            if raw and raw.strip().startswith("{"):
+                return json.loads(raw)
+        except Exception as e:
+            print(f"[ChatService] Groq ({model_name}) error: {e}")
+            continue
+    return None
 
 def chat_with_gemini(messages: List[Dict[str, str]], context_str: str, api_key: str) -> Optional[Dict[str, Any]]:
     if not HAS_GEMINI or not api_key:
@@ -104,7 +113,8 @@ def chat_with_gemini(messages: List[Dict[str, str]], context_str: str, api_key: 
                     temperature=0.0
                 )
             )
-            return json.loads(response.text)
+            if response.text and response.text.strip().startswith("{"):
+                return json.loads(response.text)
         elif HAS_LEGACY_GENAI:
             legacy_genai.configure(api_key=api_key)
             model = legacy_genai.GenerativeModel(
@@ -113,10 +123,11 @@ def chat_with_gemini(messages: List[Dict[str, str]], context_str: str, api_key: 
                 generation_config={"response_mime_type": "application/json", "temperature": 0.0}
             )
             response = model.generate_content(conversation_history)
-            return json.loads(response.text)
+            if response.text and response.text.strip().startswith("{"):
+                return json.loads(response.text)
     except Exception as e:
-        print(f"[ChatService] Gemini execution error: {e}")
-        return None
+        print(f"[ChatService] Gemini execution error ({e}), handing over to Groq LPU...")
+    return None
 
 def heuristic_chat_fallback(query: str, doc_context: Dict[str, Any], retrieved_rag: List[Dict[str, Any]], domain: Optional[str] = None) -> Dict[str, Any]:
     """

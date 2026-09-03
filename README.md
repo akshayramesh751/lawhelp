@@ -109,6 +109,7 @@ cd ai-service
 # Activate your virtual environment (venv\Scripts\activate or source venv/bin/activate)
 pip install -r requirements.txt
 uvicorn main:app --reload --port 8000
+uvicorn main:app --port 8000
 ```
 
 **Terminal 2 (Backend API):**

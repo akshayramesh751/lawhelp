@@ -60,25 +60,29 @@ SCHEMA DEFINITION:
 """
 
 def summarize_with_groq(text: str, api_key: str) -> Optional[Dict[str, Any]]:
-    """Generates document summary using Groq LPU inference."""
+    """Generates document summary using Groq LPU inference with multi-model failover."""
     if not HAS_GROQ or not api_key:
         return None
-    try:
-        client = Groq(api_key=api_key)
-        completion = client.chat.completions.create(
-            model="openai/gpt-oss-120b",
-            messages=[
-                {"role": "system", "content": SYSTEM_SUMMARIZER_PROMPT},
-                {"role": "user", "content": f"Analyze and summarize this legal document strictly without hallucinating absent terms:\n\n{text}"}
-            ],
-            temperature=0.0,
-            response_format={"type": "json_object"}
-        )
-        raw = completion.choices[0].message.content
-        return json.loads(raw)
-    except Exception as e:
-        print(f"[Summarizer] Groq execution failed: {e}")
-        return None
+    models_to_try = ["openai/gpt-oss-120b", "qwen/qwen3.6-27b", "openai/gpt-oss-20b"]
+    client = Groq(api_key=api_key)
+    for model_name in models_to_try:
+        try:
+            completion = client.chat.completions.create(
+                model=model_name,
+                messages=[
+                    {"role": "system", "content": SYSTEM_SUMMARIZER_PROMPT},
+                    {"role": "user", "content": f"Analyze and summarize this legal document strictly without hallucinating absent terms:\n\n{text}"}
+                ],
+                temperature=0.0,
+                response_format={"type": "json_object"}
+            )
+            raw = completion.choices[0].message.content
+            if raw and raw.strip().startswith("{"):
+                return json.loads(raw)
+        except Exception as e:
+            print(f"[Summarizer] Groq ({model_name}) error: {e}")
+            continue
+    return None
 
 def summarize_with_gemini(text: str, api_key: str) -> Optional[Dict[str, Any]]:
     """Generates document summary using Google Gemini (google.genai)."""
@@ -96,7 +100,8 @@ def summarize_with_gemini(text: str, api_key: str) -> Optional[Dict[str, Any]]:
                     temperature=0.0
                 )
             )
-            return json.loads(response.text)
+            if response.text and response.text.strip().startswith("{"):
+                return json.loads(response.text)
         elif HAS_LEGACY_GENAI:
             legacy_genai.configure(api_key=api_key)
             model = legacy_genai.GenerativeModel(
@@ -105,10 +110,11 @@ def summarize_with_gemini(text: str, api_key: str) -> Optional[Dict[str, Any]]:
                 generation_config={"response_mime_type": "application/json", "temperature": 0.0}
             )
             response = model.generate_content(f"Analyze and summarize this legal document strictly without hallucinating absent terms:\n\n{text}")
-            return json.loads(response.text)
+            if response.text and response.text.strip().startswith("{"):
+                return json.loads(response.text)
     except Exception as e:
-        print(f"[Summarizer] Gemini execution failed: {e}")
-        return None
+        print(f"[Summarizer] Gemini execution error ({e}), handing over to Groq...")
+    return None
 
 def heuristic_fallback_summary(text: str, structure: Dict[str, Any], domain: str) -> Dict[str, Any]:
     """
