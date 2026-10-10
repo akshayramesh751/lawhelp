@@ -1,0 +1,166 @@
+{
+  "anonymized_text": "EXECUTIVE EMPLOYMENT AGREEMENT\nThis Agreement is entered into between Apex Corp Pvt Ltd (\"Employer\") and Ananya Roy (\"Employee\").\n\n1. Restrictive Covenants: The Employee strictly agrees that for a period of 24 months following termination of employment for any reason, the Employee shall not directly or indirectly work for, consult with, or engage in any business competing with the Employer across India.\n2. Asymmetric Termination: The Employer reserves the absolute right to terminate the Employee immediately without any prior notice or compensation. The Employee must provide a mandatory 90-day prior written notice before resigning.\n3. Waiver of Statutory Benefits: The Employee hereby voluntarily forfeits and waives all claims to statutory gratuity and retrenchment compensation under all applicable labour enactments.\n4. Bar on Legal Proceedings: Any disputes arising hereunder shall be settled solely by internal company management. The Employee expressly agrees not to institute any legal proceedings, injunctions, or suits in any court of law or judicial tribunal.",
+  "classification": {
+    "confidence": 1.0,
+    "domain": "Employment Contract",
+    "method": "Tier1_HeaderMatch"
+  },
+  "original_length": 1076,
+  "pii_entities": [],
+  "raw_text": "EXECUTIVE EMPLOYMENT AGREEMENT\nThis Agreement is entered into between Apex Corp Pvt Ltd (\"Employer\") and Ananya Roy (\"Employee\").\n\n1. Restrictive Covenants: The Employee strictly agrees that for a period of 24 months following termination of employment for any reason, the Employee shall not directly or indirectly work for, consult with, or engage in any business competing with the Employer across India.\n2. Asymmetric Termination: The Employer reserves the absolute right to terminate the Employee immediately without any prior notice or compensation. The Employee must provide a mandatory 90-day prior written notice before resigning.\n3. Waiver of Statutory Benefits: The Employee hereby voluntarily forfeits and waives all claims to statutory gratuity and retrenchment compensation under all applicable labour enactments.\n4. Bar on Legal Proceedings: Any disputes arising hereunder shall be settled solely by internal company management. The Employee expressly agrees not to institute any legal proceedings, injunctions, or suits in any court of law or judicial tribunal.",
+  "risk_analysis": [
+    {
+      "clauseIndex": 1,
+      "clauseType": "Termination & Notice",
+      "confidenceScore": 0.8,
+      "deterministicRuleTriggered": false,
+      "finding": "“Restrictive Covenants: The Employee strictly agrees that for a period of 24 months following termination of employment for any reason, the Employee shall not directly or…” — no statutory conflict is apparent in this statement.",
+      "humanReviewRequired": true,
+      "reasoning": "Assessed solely on the wording quoted above (type: Termination & Notice). Relevant framework: Section 27 of the Indian Contract Act, 1872 (restraint of trade). The clause does not restrain legal proceedings (Section 28, Indian Contract Act, 1872), impose a penalty or unlawful consideration (Sections 23 and 74), and no conflicting statutory text was retrieved for it.",
+      "riskLevel": "NO_ISSUE_DETECTED",
+      "statutoryConflict": {
+        "actName": "N/A",
+        "authorityLevel": "N/A",
+        "precedentCitation": "N/A",
+        "ruleNumber": "N/A",
+        "section": "N/A"
+      }
+    },
+    {
+      "clauseIndex": 2,
+      "clauseType": "Termination & Notice",
+      "confidenceScore": 0.8,
+      "dedupeNote": "Near-duplicate of clause #1 detected (similarity >= 0.55); text re-grounded in own clause wording.",
+      "deterministicRuleTriggered": false,
+      "finding": "Reviewed on its own wording — “Asymmetric Termination: The Employer reserves the absolute right to terminate the Employee immediately without any prior notice or compensation. The Employee must…” — no statutory conflict is apparent in this specific statement.",
+      "humanReviewRequired": true,
+      "reasoning": "Classified as 'Termination & Notice'. The assessment rests only on what this clause itself states (quoted above); it overlaps in subject with Clause #1, so the shared analysis is not repeated here. Nothing in this clause independently restrains legal proceedings, imposes a penalty, or conflicts with a statutory requirement.",
+      "riskLevel": "NO_ISSUE_DETECTED",
+      "similarToClause": 1,
+      "statutoryConflict": {
+        "actName": "N/A",
+        "authorityLevel": "N/A",
+        "precedentCitation": "N/A",
+        "ruleNumber": "N/A",
+        "section": "N/A"
+      }
+    },
+    {
+      "clauseIndex": 3,
+      "clauseType": "General Covenants",
+      "confidenceScore": 1.0,
+      "deterministicRuleTriggered": true,
+      "finding": "Attempted contractual waiver or forfeiture of statutory gratuity is illegal.",
+      "humanReviewRequired": false,
+      "reasoning": "Under Section 4 of the Payment of Gratuity Act, 1972, gratuity is a statutory entitlement upon continuous service of not less than five years. It cannot be contracted out or arbitrarily forfeited except under narrow statutory grounds (e.g. violent misconduct causing riotous damage).",
+      "riskLevel": "HIGH_RISK",
+      "statutoryConflict": {
+        "actName": "Payment of Gratuity Act, 1972",
+        "authorityLevel": "STATUTE",
+        "precedentCitation": "N/A",
+        "ruleNumber": "N/A",
+        "section": "4"
+      }
+    },
+    {
+      "clauseIndex": 4,
+      "clauseType": "Governing Law & Disputes",
+      "confidenceScore": 0.8,
+      "dedupeNote": "Near-duplicate of clause #1 detected (similarity >= 0.55); text re-grounded in own clause wording.",
+      "deterministicRuleTriggered": false,
+      "finding": "Reviewed on its own wording — “Bar on Legal Proceedings: Any disputes arising hereunder shall be settled solely by internal company management. The Employee expressly agrees not to institute any legal…” — no statutory conflict is apparent in this specific statement.",
+      "humanReviewRequired": true,
+      "reasoning": "Classified as 'Governing Law & Disputes'. The assessment rests only on what this clause itself states (quoted above); it overlaps in subject with Clause #1, so the shared analysis is not repeated here. Nothing in this clause independently restrains legal proceedings, imposes a penalty, or conflicts with a statutory requirement.",
+      "riskLevel": "NO_ISSUE_DETECTED",
+      "similarToClause": 1,
+      "statutoryConflict": {
+        "actName": "N/A",
+        "authorityLevel": "N/A",
+        "precedentCitation": "N/A",
+        "ruleNumber": "N/A",
+        "section": "N/A"
+      }
+    }
+  ],
+  "sanitized_regional_text": "EXECUTIVE EMPLOYMENT AGREEMENT\nThis Agreement is entered into between Apex Corp Pvt Ltd (\"Employer\") and Ananya Roy (\"Employee\").\n\n1. Restrictive Covenants: The Employee strictly agrees that for a period of 24 months following termination of employment for any reason, the Employee shall not directly or indirectly work for, consult with, or engage in any business competing with the Employer across India.\n2. Asymmetric Termination: The Employer reserves the absolute right to terminate the Employee immediately without any prior notice or compensation. The Employee must provide a mandatory 90-day prior written notice before resigning.\n3. Waiver of Statutory Benefits: The Employee hereby voluntarily forfeits and waives all claims to statutory gratuity and retrenchment compensation under all applicable labour enactments.\n4. Bar on Legal Proceedings: Any disputes arising hereunder shall be settled solely by internal company management. The Employee expressly agrees not to institute any legal proceedings, injunctions, or suits in any court of law or judicial tribunal.",
+  "structure": {
+    "clauses": [
+      {
+        "clauseHeader": "Restrictive Covenants: The Employee strictly agrees that for a period of 24 months following termination of employment for any reason, the Employee shall not directly or indirectly work for, consult with, or engage in any business competing with the Employer across India.",
+        "clauseIndex": 1,
+        "detectedType": "Termination & Notice",
+        "jurisdiction": {
+          "country": "India",
+          "governingLawClausePresent": false,
+          "state": null
+        },
+        "rawText": "1. Restrictive Covenants: The Employee strictly agrees that for a period of 24 months following termination of employment for any reason, the Employee shall not directly or indirectly work for, consult with, or engage in any business competing with the Employer across India.",
+        "sanitizedText": "1. Restrictive Covenants: The Employee strictly agrees that for a period of 24 months following termination of employment for any reason, the Employee shall not directly or indirectly work for, consult with, or engage in any business competing with the Employer across India."
+      },
+      {
+        "clauseHeader": "Asymmetric Termination: The Employer reserves the absolute right to terminate the Employee immediately without any prior notice or compensation. The Employee must provide a mandatory 90-day prior written notice before resigning.",
+        "clauseIndex": 2,
+        "detectedType": "Termination & Notice",
+        "jurisdiction": {
+          "country": "India",
+          "governingLawClausePresent": false,
+          "state": null
+        },
+        "rawText": "2. Asymmetric Termination: The Employer reserves the absolute right to terminate the Employee immediately without any prior notice or compensation. The Employee must provide a mandatory 90-day prior written notice before resigning.",
+        "sanitizedText": "2. Asymmetric Termination: The Employer reserves the absolute right to terminate the Employee immediately without any prior notice or compensation. The Employee must provide a mandatory 90-day prior written notice before resigning."
+      },
+      {
+        "clauseHeader": "Waiver of Statutory Benefits: The Employee hereby voluntarily forfeits and waives all claims to statutory gratuity and retrenchment compensation under all applicable labour enactments.",
+        "clauseIndex": 3,
+        "detectedType": "General Covenants",
+        "jurisdiction": {
+          "country": "India",
+          "governingLawClausePresent": false,
+          "state": null
+        },
+        "rawText": "3. Waiver of Statutory Benefits: The Employee hereby voluntarily forfeits and waives all claims to statutory gratuity and retrenchment compensation under all applicable labour enactments.",
+        "sanitizedText": "3. Waiver of Statutory Benefits: The Employee hereby voluntarily forfeits and waives all claims to statutory gratuity and retrenchment compensation under all applicable labour enactments."
+      },
+      {
+        "clauseHeader": "Bar on Legal Proceedings: Any disputes arising hereunder shall be settled solely by internal company management. The Employee expressly agrees not to institute any legal proceedings, injunctions, or suits in any court of law or judicial tribunal.",
+        "clauseIndex": 4,
+        "detectedType": "Governing Law & Disputes",
+        "jurisdiction": {
+          "country": "India",
+          "governingLawClausePresent": false,
+          "state": null
+        },
+        "rawText": "4. Bar on Legal Proceedings: Any disputes arising hereunder shall be settled solely by internal company management. The Employee expressly agrees not to institute any legal proceedings, injunctions, or suits in any court of law or judicial tribunal.",
+        "sanitizedText": "4. Bar on Legal Proceedings: Any disputes arising hereunder shall be settled solely by internal company management. The Employee expressly agrees not to institute any legal proceedings, injunctions, or suits in any court of law or judicial tribunal."
+      }
+    ],
+    "parties": [],
+    "preamble": "EXECUTIVE EMPLOYMENT AGREEMENT\nThis Agreement is entered into between Apex Corp Pvt Ltd (\"Employer\") and Ananya Roy (\"Employee\")."
+  },
+  "summary_output": {
+    "deadlinesAndMilestones": [
+      "Tenure: period of 24 months"
+    ],
+    "executiveSummary": "This is a Employment Contract entered into between the executing parties detailing the transfer of rights, statutory compliance, consideration, and covenants under Indian law.",
+    "financialTerms": [
+      {
+        "amount": "₹90/-",
+        "deadline": "As specified in agreement schedule",
+        "description": "Base Gross Salary / Remuneration"
+      }
+    ],
+    "governingLaw": "Not specified in the document",
+    "obligations": [
+      "Strict adherence to confidentiality, IP assignment, and professional conduct",
+      "Duty of good faith and non-solicitation during and following tenure",
+      "Affirmative Duty: a mandatory 90-day prior written notice before resigning"
+    ],
+    "rights": [
+      "Plaintiff seeks permanent and interim prohibitory injunction against defendants",
+      "Employee entitled to monthly remuneration and statutory benefits (PF, Gratuity, ESIC)",
+      "Employee eligible for annual paid leaves, sick leave, and standard company holidays"
+    ],
+    "terminationConditions": []
+  },
+  "translated_text": "EXECUTIVE EMPLOYMENT AGREEMENT\nThis Agreement is entered into between Apex Corp Pvt Ltd (\"Employer\") and Ananya Roy (\"Employee\").\n\n1. Restrictive Covenants: The Employee strictly agrees that for a period of 24 months following termination of employment for any reason, the Employee shall not directly or indirectly work for, consult with, or engage in any business competing with the Employer across India.\n2. Asymmetric Termination: The Employer reserves the absolute right to terminate the Employee immediately without any prior notice or compensation. The Employee must provide a mandatory 90-day prior written notice before resigning.\n3. Waiver of Statutory Benefits: The Employee hereby voluntarily forfeits and waives all claims to statutory gratuity and retrenchment compensation under all applicable labour enactments.\n4. Bar on Legal Proceedings: Any disputes arising hereunder shall be settled solely by internal company management. The Employee expressly agrees not to institute any legal proceedings, injunctions, or suits in any court of law or judicial tribunal."
+}

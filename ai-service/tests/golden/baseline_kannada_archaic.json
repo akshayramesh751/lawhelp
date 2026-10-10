@@ -1,0 +1,59 @@
+{
+  "anonymized_text": "   ",
+  "classification": {
+    "confidence": 0.5,
+    "domain": "Legal Document",
+    "method": "Fallback"
+  },
+  "original_length": 25,
+  "pii_entities": [],
+  "raw_text": "ಕ ್ ಷೇತ್ರ ಮತ್ತು ಱಾಮು ೞಾಮು",
+  "risk_analysis": [
+    {
+      "clauseIndex": 1,
+      "clauseType": "General Paragraph",
+      "confidenceScore": 1.0,
+      "deterministicRuleTriggered": false,
+      "finding": "No apparent statutory conflict identified from the text reviewed.",
+      "humanReviewRequired": false,
+      "reasoning": "The clause consists of standard operational recitals establishing the contractual framework under Section 10 of the Indian Contract Act, 1872, with no adverse statutory liabilities.",
+      "riskLevel": "NO_ISSUE_DETECTED",
+      "statutoryConflict": {
+        "actName": "N/A",
+        "authorityLevel": "N/A",
+        "precedentCitation": "N/A",
+        "ruleNumber": "N/A",
+        "section": "N/A"
+      }
+    }
+  ],
+  "sanitized_regional_text": "ಕ್ಷೇತ್ರ ಮತ್ತು ರಾಮು ಳಾಮು",
+  "structure": {
+    "clauses": [
+      {
+        "clauseHeader": "General Paragraph",
+        "clauseIndex": 1,
+        "detectedType": "General Paragraph",
+        "jurisdiction": {
+          "country": "India",
+          "governingLawClausePresent": false,
+          "state": null
+        },
+        "rawText": "",
+        "sanitizedText": ""
+      }
+    ],
+    "parties": [],
+    "preamble": ""
+  },
+  "summary_output": {
+    "deadlinesAndMilestones": [],
+    "executiveSummary": "This is a Legal Document entered into between the executing parties detailing the transfer of rights, statutory compliance, consideration, and covenants under Indian law.",
+    "financialTerms": [],
+    "governingLaw": "Not specified in the document",
+    "obligations": [],
+    "rights": [],
+    "terminationConditions": []
+  },
+  "translated_text": "   "
+}

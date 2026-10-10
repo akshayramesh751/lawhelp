@@ -1,0 +1,110 @@
+{
+  "anonymized_text": " Rent   Agreement   (Rental Agreement)\n 15  2024     Contract .\n Owner/Lessor : .  Tenant/Lessee :  .\n  Rent : ₹35,000/-.  Security Deposit  : ₹2,00,000/-.\n:   1    (Notice)   Contract  .\n:   Court .",
+  "classification": {
+    "confidence": 1.0,
+    "domain": "Rental Agreement",
+    "method": "Tier1_HeaderMatch"
+  },
+  "original_length": 326,
+  "pii_entities": [],
+  "raw_text": "ಬಾಡಿಗೆ ಕರಾರು ಪತ್ರ (Rental Agreement)\nದಿನಾಂಕ 15ನೇ ಜುಲೈ 2024 ರಂದು ಬೆಂಗಳೂರಿನಲ್ಲಿ ಮಾಡಿಕೊಂಡ ಒಪ್ಪಂದ.\nಮಾಲೀಕರು: ರಾಜೇಶ್ ಕುಮಾರ್ ಶರ್ಮಾ. ಬಾಡಿಗೆದಾರರು: ಅನನ್ಯ ಅಯ್ಯರ್.\nತಿಂಗಳ ಬಾಡಿಗೆ: ₹35,000/-. ಮುಂಗಡ ಠೇವಣಿ: ₹2,00,000/-.\nಗಮನಿಸಿ: ಎರಡೂ ಕಡೆಯವರು 1 ತಿಂಗಳ ಲಿಖಿತ ಮುನ್ಸೂಚನೆ (Notice) ನೀಡಿ ಒಪ್ಪಂದವನ್ನು ಕೊನೆಗೊಳಿಸಬಹುದು.\nನ್ಯಾಯವ್ಯಾಪ್ತಿ: ಬೆಂಗಳೂರು ನ್ಯಾಯಾಲಯಗಳು.",
+  "risk_analysis": [
+    {
+      "clauseIndex": 1,
+      "clauseType": "Contractual Covenant",
+      "confidenceScore": 0.8,
+      "deterministicRuleTriggered": false,
+      "finding": "“Rent Agreement (Rental Agreement) 15 2024 Contract” — no statutory conflict is apparent in this statement.",
+      "humanReviewRequired": true,
+      "reasoning": "Assessed solely on the wording quoted above (type: Contractual Covenant). The clause does not restrain legal proceedings (Section 28, Indian Contract Act, 1872), impose a penalty or unlawful consideration (Sections 23 and 74), and no conflicting statutory text was retrieved for it.",
+      "riskLevel": "NO_ISSUE_DETECTED",
+      "statutoryConflict": {
+        "actName": "N/A",
+        "authorityLevel": "N/A",
+        "precedentCitation": "N/A",
+        "ruleNumber": "N/A",
+        "section": "N/A"
+      }
+    },
+    {
+      "clauseIndex": 2,
+      "clauseType": "Contractual Covenant",
+      "confidenceScore": 0.8,
+      "dedupeNote": "Near-duplicate of clause #1 detected (similarity >= 0.55); text re-grounded in own clause wording.",
+      "deterministicRuleTriggered": false,
+      "finding": "Reviewed on its own wording — “Security Deposit : ₹2,00,000/-. : 1 (Notice) Contract . : Court .” — no statutory conflict is apparent in this specific statement.",
+      "humanReviewRequired": true,
+      "reasoning": "Classified as 'Contractual Covenant'. The assessment rests only on what this clause itself states (quoted above); it overlaps in subject with Clause #1, so the shared analysis is not repeated here. Nothing in this clause independently restrains legal proceedings, imposes a penalty, or conflicts with a statutory requirement.",
+      "riskLevel": "NO_ISSUE_DETECTED",
+      "similarToClause": 1,
+      "statutoryConflict": {
+        "actName": "N/A",
+        "authorityLevel": "N/A",
+        "precedentCitation": "N/A",
+        "ruleNumber": "N/A",
+        "section": "N/A"
+      }
+    }
+  ],
+  "sanitized_regional_text": "ಬಾಡಿಗೆ ಕರಾರು ಪತ್ರ (Rental Agreement)\nದಿನಾಂಕ 15ನೇ ಜುಲೈ 2024 ರಂದು ಬೆಂಗಳೂರಿನಲ್ಲಿ ಮಾಡಿಕೊಂಡ ಒಪ್ಪಂದ.\nಮಾಲೀಕರು: ರಾಜೇಶ್ಕುಮಾರ್ಶರ್ಮಾ. ಬಾಡಿಗೆದಾರರು: ಅನನ್ಯ ಅಯ್ಯರ್.\nತಿಂಗಳ ಬಾಡಿಗೆ: ₹35,000/-. ಮುಂಗಡ ಠೇವಣಿ: ₹2,00,000/-.\nಗಮನಿಸಿ: ಎರಡೂ ಕಡೆಯವರು 1 ತಿಂಗಳ ಲಿಖಿತ ಮುನ್ಸೂಚನೆ (Notice) ನೀಡಿ ಒಪ್ಪಂದವನ್ನು ಕೊನೆಗೊಳಿಸಬಹುದು.\nನ್ಯಾಯವ್ಯಾಪ್ತಿ: ಬೆಂಗಳೂರು ನ್ಯಾಯಾಲಯಗಳು.",
+  "structure": {
+    "clauses": [
+      {
+        "clauseHeader": "Section 1",
+        "clauseIndex": 1,
+        "detectedType": "Contractual Covenant",
+        "jurisdiction": {
+          "country": "India",
+          "governingLawClausePresent": false,
+          "state": null
+        },
+        "rawText": "Rent   Agreement   (Rental Agreement)\n 15  2024     Contract",
+        "sanitizedText": "Rent   Agreement   (Rental Agreement)\n 15  2024     Contract"
+      },
+      {
+        "clauseHeader": "Section 2",
+        "clauseIndex": 2,
+        "detectedType": "Contractual Covenant",
+        "jurisdiction": {
+          "country": "India",
+          "governingLawClausePresent": false,
+          "state": null
+        },
+        "rawText": "Security Deposit  : ₹2,00,000/-.\n:   1    (Notice)   Contract  .\n:   Court .",
+        "sanitizedText": "Security Deposit  : ₹2,00,000/-.\n:   1    (Notice)   Contract  .\n:   Court ."
+      }
+    ],
+    "parties": [],
+    "preamble": "Rent   Agreement   (Rental Agreement)\n 15  2024     Contract .\n Owner/Lessor : .  Tenant/Lessee :  .\n  Rent : ₹35,000/-.  Security Deposit  : ₹2,00,000/-.\n:   1    (Notice)   Contract  .\n:   Court ."
+  },
+  "summary_output": {
+    "deadlinesAndMilestones": [],
+    "executiveSummary": "This is a Rental Agreement entered into between the executing parties detailing the transfer of rights, statutory compliance, consideration, and covenants under Indian law.",
+    "financialTerms": [
+      {
+        "amount": "₹15/-",
+        "deadline": "Payable on 24     Contract",
+        "description": "Monthly Rent"
+      },
+      {
+        "amount": "₹2,00,000/-",
+        "deadline": "Payable on 24     Contract",
+        "description": "Security Deposit"
+      }
+    ],
+    "governingLaw": "Not specified in the document",
+    "obligations": [
+      "Tenant shall pay agreed monthly rent on or before the due date",
+      "Tenant shall pay electricity (BESCOM), water, and periodic maintenance charges",
+      "Tenant shall not carry out unauthorized structural alterations or sublet the premises"
+    ],
+    "rights": [
+      "Plaintiff seeks declaration of absolute ownership and legal title over the suit schedule property",
+      "Tenant receives quiet enjoyment and peaceful possession of the demised premises",
+      "Tenant is entitled to prompt refund of interest-free security deposit upon peaceful handover",
+      "Lessor / Tenant inspection rights permitted upon prior reasonable notice"
+    ],
+    "terminationConditions": []
+  },
+  "translated_text": " Rent   Agreement   (Rental Agreement)\n 15  2024     Contract .\n Owner/Lessor : .  Tenant/Lessee :  .\n  Rent : ₹35,000/-.  Security Deposit  : ₹2,00,000/-.\n:   1    (Notice)   Contract  .\n:   Court ."
+}

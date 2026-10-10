@@ -1,0 +1,4 @@
+# Dev/Test dependencies for ai-service
+# Install with: pip install -r requirements-dev.txt
+pytest>=7.0
+pytest-json-report>=1.5

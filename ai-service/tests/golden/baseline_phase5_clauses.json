@@ -1,0 +1,136 @@
+{
+  "anonymized_text": "EMPLOYMENT AGREEMENT\nThis Employment Agreement is entered into between ABC Tech Pvt Ltd and Rahul Sharma (Aadhaar: [AADHAAR_REDACTED], PAN: [PAN_REDACTED]).\n\nClause 1. Post-Employment Non-Compete\nThe Employee agrees that for a period of 24 months following termination of employment, the Employee shall not work for any competitor across India.\n\nClause 2. Termination\nThe Employer may terminate this employment agreement immediately without notice, whereas the Employee is required to provide 90 days prior written notice.\n\nClause 3. Governing Law\nThis agreement shall be governed by the laws of India and courts at Bengaluru, Karnataka shall have jurisdiction.",
+  "classification": {
+    "confidence": 1.0,
+    "domain": "Employment Contract",
+    "method": "Tier1_HeaderMatch"
+  },
+  "original_length": 653,
+  "pii_entities": [
+    {
+      "entityType": "AADHAAR",
+      "maskedValue": "[AADHAAR_REDACTED]"
+    },
+    {
+      "entityType": "PAN",
+      "maskedValue": "[PAN_REDACTED]"
+    }
+  ],
+  "raw_text": "EMPLOYMENT AGREEMENT\nThis Employment Agreement is entered into between ABC Tech Pvt Ltd and Rahul Sharma (Aadhaar: 1234 5678 9012, PAN: ABCDE1234F).\n\nClause 1. Post-Employment Non-Compete\nThe Employee agrees that for a period of 24 months following termination of employment, the Employee shall not work for any competitor across India.\n\nClause 2. Termination\nThe Employer may terminate this employment agreement immediately without notice, whereas the Employee is required to provide 90 days prior written notice.\n\nClause 3. Governing Law\nThis agreement shall be governed by the laws of India and courts at Bengaluru, Karnataka shall have jurisdiction.",
+  "risk_analysis": [
+    {
+      "clauseIndex": 1,
+      "clauseType": "Term & Tenure",
+      "confidenceScore": 1.0,
+      "deterministicRuleTriggered": true,
+      "finding": "Post-employment non-compete covenants are void ab initio under Indian law.",
+      "humanReviewRequired": false,
+      "reasoning": "Section 27 of the Indian Contract Act, 1872 renders any agreement that restrains anyone from exercising a lawful profession, trade, or business void. The Supreme Court has repeatedly held that negative covenants extending beyond the term of employment are unenforceable.",
+      "riskLevel": "HIGH_RISK",
+      "statutoryConflict": {
+        "actName": "Indian Contract Act, 1872",
+        "authorityLevel": "STATUTE",
+        "precedentCitation": "Percept D'Mark (India) Pvt. Ltd. v. Zaheer Khan (2006) 4 SCC 227",
+        "ruleNumber": "N/A",
+        "section": "27"
+      }
+    },
+    {
+      "clauseIndex": 2,
+      "clauseType": "Termination & Notice",
+      "confidenceScore": 0.95,
+      "deterministicRuleTriggered": true,
+      "finding": "Asymmetric termination notice heavily favors the employer over the employee.",
+      "humanReviewRequired": false,
+      "reasoning": "Section 39 mandates minimum one month (30 days) written notice or wages in lieu for termination of employees with continuous service exceeding 6 months. A contract permitting immediate employer termination while binding the employee to 90 days creates an aggressive, one-sided burden.",
+      "riskLevel": "ONE_SIDED",
+      "statutoryConflict": {
+        "actName": "Karnataka Shops and Commercial Establishments Act, 1961",
+        "authorityLevel": "STATE_RULE",
+        "precedentCitation": "N/A",
+        "ruleNumber": "N/A",
+        "section": "39"
+      }
+    },
+    {
+      "clauseIndex": 3,
+      "clauseType": "Governing Law & Disputes",
+      "confidenceScore": 0.98,
+      "deterministicRuleTriggered": true,
+      "finding": "Standard governing law and domestic court jurisdiction clause.",
+      "humanReviewRequired": false,
+      "reasoning": "Designation of valid domestic territorial jurisdiction within India is fully enforceable under the Code of Civil Procedure, 1908 and Section 28 of the Indian Contract Act, 1872.",
+      "riskLevel": "NO_ISSUE_DETECTED",
+      "statutoryConflict": {
+        "actName": "N/A",
+        "authorityLevel": "N/A",
+        "precedentCitation": "N/A",
+        "ruleNumber": "N/A",
+        "section": "N/A"
+      }
+    }
+  ],
+  "sanitized_regional_text": "EMPLOYMENT AGREEMENT\nThis Employment Agreement is entered into between ABC Tech Pvt Ltd and Rahul Sharma (Aadhaar: 1234 5678 9012, PAN: ABCDE1234F).\n\nClause 1. Post-Employment Non-Compete\nThe Employee agrees that for a period of 24 months following termination of employment, the Employee shall not work for any competitor across India.\n\nClause 2. Termination\nThe Employer may terminate this employment agreement immediately without notice, whereas the Employee is required to provide 90 days prior written notice.\n\nClause 3. Governing Law\nThis agreement shall be governed by the laws of India and courts at Bengaluru, Karnataka shall have jurisdiction.",
+  "structure": {
+    "clauses": [
+      {
+        "clauseHeader": "Post-Employment Non-Compete",
+        "clauseIndex": 1,
+        "detectedType": "Term & Tenure",
+        "jurisdiction": {
+          "country": "India",
+          "governingLawClausePresent": false,
+          "state": null
+        },
+        "rawText": "Clause 1. Post-Employment Non-Compete\nThe Employee agrees that for a period of 24 months following termination of employment, the Employee shall not work for any competitor across India.",
+        "sanitizedText": "Clause 1. Post-Employment Non-Compete\nThe Employee agrees that for a period of 24 months following termination of employment, the Employee shall not work for any competitor across India."
+      },
+      {
+        "clauseHeader": "Termination",
+        "clauseIndex": 2,
+        "detectedType": "Termination & Notice",
+        "jurisdiction": {
+          "country": "India",
+          "governingLawClausePresent": false,
+          "state": null
+        },
+        "rawText": "Clause 2. Termination\nThe Employer may terminate this employment agreement immediately without notice, whereas the Employee is required to provide 90 days prior written notice.",
+        "sanitizedText": "Clause 2. Termination\nThe Employer may terminate this employment agreement immediately without notice, whereas the Employee is required to provide 90 days prior written notice."
+      },
+      {
+        "clauseHeader": "Governing Law",
+        "clauseIndex": 3,
+        "detectedType": "Governing Law & Disputes",
+        "jurisdiction": {
+          "country": "India",
+          "governingLawClausePresent": true,
+          "state": "Karnataka"
+        },
+        "rawText": "Clause 3. Governing Law\nThis agreement shall be governed by the laws of India and courts at Bengaluru, Karnataka shall have jurisdiction.",
+        "sanitizedText": "Clause 3. Governing Law\nThis agreement shall be governed by the laws of India and courts at Bengaluru, Karnataka shall have jurisdiction."
+      }
+    ],
+    "parties": [],
+    "preamble": "EMPLOYMENT AGREEMENT\nThis Employment Agreement is entered into between ABC Tech Pvt Ltd and Rahul Sharma (Aadhaar: [AADHAAR_REDACTED], PAN: [PAN_REDACTED]).\n\nClause 1. Post-Employment Non-Compete\nThe Employee agrees that for a period of 24 months following termination of employment, the Employee shall not work for any competitor across India.\n\nClause 2. Termination\nThe Employer may terminate this employment agreement immediately without notice, whereas the Employee is required to provide 90 days prior written notice.\n\nClause 3. Governing Law\nThis agreement shall be governed by the laws of India and courts at Bengaluru, Karnataka shall have jurisdiction."
+  },
+  "summary_output": {
+    "deadlinesAndMilestones": [
+      "Tenure: period of 24 months"
+    ],
+    "executiveSummary": "This is a Employment Contract entered into between the executing parties detailing the transfer of rights, statutory compliance, consideration, and covenants under Indian law.",
+    "financialTerms": [],
+    "governingLaw": "Governed by India and courts at Bengaluru, Karnataka shall have jurisdiction",
+    "obligations": [
+      "Strict adherence to confidentiality, IP assignment, and professional conduct",
+      "Duty of good faith and non-solicitation during and following tenure"
+    ],
+    "rights": [
+      "Employee entitled to monthly remuneration and statutory benefits (PF, Gratuity, ESIC)",
+      "Employee eligible for annual paid leaves, sick leave, and standard company holidays"
+    ],
+    "terminationConditions": [
+      "Termination permitted upon 90 days prior written notice in writing"
+    ]
+  },
+  "translated_text": "EMPLOYMENT AGREEMENT\nThis Employment Agreement is entered into between ABC Tech Pvt Ltd and Rahul Sharma (Aadhaar: [AADHAAR_REDACTED], PAN: [PAN_REDACTED]).\n\nClause 1. Post-Employment Non-Compete\nThe Employee agrees that for a period of 24 months following termination of employment, the Employee shall not work for any competitor across India.\n\nClause 2. Termination\nThe Employer may terminate this employment agreement immediately without notice, whereas the Employee is required to provide 90 days prior written notice.\n\nClause 3. Governing Law\nThis agreement shall be governed by the laws of India and courts at Bengaluru, Karnataka shall have jurisdiction."
+}

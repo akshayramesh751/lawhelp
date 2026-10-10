@@ -1,0 +1,238 @@
+{
+  "anonymized_text": "RESIDENTIAL LEASE AGREEMENT\nThis Agreement is made on 1st August 2024 between Mr. S. K. Narayana (Lessor) and Ms. Priyanka Sen (Lessee).\n\n1. Demised Premises: Flat No. 402, Green Glen Heights, Bellandur, Bengaluru.\n2. Monthly Rent & Maintenance: The Lessee shall pay a monthly rent of ₹45,000/- on or before the 5th of each calendar month.\n3. Security Deposit: The Lessee has deposited an interest-free refundable security deposit of ₹3,00,000/- with the Lessor.\n4. Lease Tenure & Lock-in: The lease duration is 11 months with a mandatory lock-in period of 6 months.\n5. Notice Period: Either party may terminate the tenancy by providing 2 months written notice after the lock-in period.\n6. Governing Law: Governed by the Karnataka Rent Control laws and Transfer of Property Act 1882 with jurisdiction in Bengaluru courts.",
+  "classification": {
+    "confidence": 1.0,
+    "domain": "Rental Agreement",
+    "method": "Tier1_HeaderMatch"
+  },
+  "original_length": 821,
+  "pii_entities": [],
+  "raw_text": "RESIDENTIAL LEASE AGREEMENT\nThis Agreement is made on 1st August 2024 between Mr. S. K. Narayana (Lessor) and Ms. Priyanka Sen (Lessee).\n\n1. Demised Premises: Flat No. 402, Green Glen Heights, Bellandur, Bengaluru.\n2. Monthly Rent & Maintenance: The Lessee shall pay a monthly rent of ₹45,000/- on or before the 5th of each calendar month.\n3. Security Deposit: The Lessee has deposited an interest-free refundable security deposit of ₹3,00,000/- with the Lessor.\n4. Lease Tenure & Lock-in: The lease duration is 11 months with a mandatory lock-in period of 6 months.\n5. Notice Period: Either party may terminate the tenancy by providing 2 months written notice after the lock-in period.\n6. Governing Law: Governed by the Karnataka Rent Control laws and Transfer of Property Act 1882 with jurisdiction in Bengaluru courts.",
+  "risk_analysis": [
+    {
+      "clauseIndex": 1,
+      "clauseType": "Premises / Schedule Property",
+      "confidenceScore": 0.8,
+      "deterministicRuleTriggered": false,
+      "finding": "“Demised Premises: Flat No. 402, Green Glen Heights, Bellandur, Bengaluru.” — no statutory conflict is apparent in this statement.",
+      "humanReviewRequired": true,
+      "reasoning": "Assessed solely on the wording quoted above (type: Premises / Schedule Property). The clause does not restrain legal proceedings (Section 28, Indian Contract Act, 1872), impose a penalty or unlawful consideration (Sections 23 and 74), and no conflicting statutory text was retrieved for it.",
+      "riskLevel": "NO_ISSUE_DETECTED",
+      "statutoryConflict": {
+        "actName": "N/A",
+        "authorityLevel": "N/A",
+        "precedentCitation": "N/A",
+        "ruleNumber": "N/A",
+        "section": "N/A"
+      }
+    },
+    {
+      "clauseIndex": 2,
+      "clauseType": "Financial & Consideration Schedules",
+      "confidenceScore": 0.8,
+      "deterministicRuleTriggered": false,
+      "finding": "“Monthly Rent & Maintenance: The Lessee shall pay a monthly rent of ₹45,000/- on or before the 5th of each calendar month.” — no statutory conflict is apparent in this statement.",
+      "humanReviewRequired": true,
+      "reasoning": "Assessed solely on the wording quoted above (type: Financial & Consideration Schedules). Relevant framework: Section 105 of the Transfer of Property Act, 1882 (lease). The clause does not restrain legal proceedings (Section 28, Indian Contract Act, 1872), impose a penalty or unlawful consideration (Sections 23 and 74), and no conflicting statutory text was retrieved for it.",
+      "riskLevel": "NO_ISSUE_DETECTED",
+      "statutoryConflict": {
+        "actName": "N/A",
+        "authorityLevel": "N/A",
+        "precedentCitation": "N/A",
+        "ruleNumber": "N/A",
+        "section": "N/A"
+      }
+    },
+    {
+      "clauseIndex": 3,
+      "clauseType": "Financial & Consideration Schedules",
+      "confidenceScore": 0.8,
+      "dedupeNote": "Near-duplicate of clause #2 detected (similarity >= 0.55); text re-grounded in own clause wording.",
+      "deterministicRuleTriggered": false,
+      "finding": "Reviewed on its own wording — “Security Deposit: The Lessee has deposited an interest-free refundable security deposit of ₹3,00,000/- with the Lessor.” — no statutory conflict is apparent in this specific statement.",
+      "humanReviewRequired": true,
+      "reasoning": "Classified as 'Financial & Consideration Schedules'. The assessment rests only on what this clause itself states (quoted above); it overlaps in subject with Clause #2, so the shared analysis is not repeated here. Nothing in this clause independently restrains legal proceedings, imposes a penalty, or conflicts with a statutory requirement.",
+      "riskLevel": "NO_ISSUE_DETECTED",
+      "similarToClause": 2,
+      "statutoryConflict": {
+        "actName": "N/A",
+        "authorityLevel": "N/A",
+        "precedentCitation": "N/A",
+        "ruleNumber": "N/A",
+        "section": "N/A"
+      }
+    },
+    {
+      "clauseIndex": 4,
+      "clauseType": "Term & Tenure",
+      "confidenceScore": 0.8,
+      "dedupeNote": "Near-duplicate of clause #1 detected (similarity >= 0.55); text re-grounded in own clause wording.",
+      "deterministicRuleTriggered": false,
+      "finding": "Reviewed on its own wording — “Lease Tenure & Lock-in: The lease duration is 11 months with a mandatory lock-in period of 6 months.” — no statutory conflict is apparent in this specific statement.",
+      "humanReviewRequired": true,
+      "reasoning": "Classified as 'Term & Tenure'. The assessment rests only on what this clause itself states (quoted above); it overlaps in subject with Clause #1, so the shared analysis is not repeated here. Nothing in this clause independently restrains legal proceedings, imposes a penalty, or conflicts with a statutory requirement.",
+      "riskLevel": "NO_ISSUE_DETECTED",
+      "similarToClause": 1,
+      "statutoryConflict": {
+        "actName": "N/A",
+        "authorityLevel": "N/A",
+        "precedentCitation": "N/A",
+        "ruleNumber": "N/A",
+        "section": "N/A"
+      }
+    },
+    {
+      "clauseIndex": 5,
+      "clauseType": "Termination & Notice",
+      "confidenceScore": 0.8,
+      "deterministicRuleTriggered": false,
+      "finding": "“Notice Period: Either party may terminate the tenancy by providing 2 months written notice after the lock-in period.” — no statutory conflict is apparent in this statement.",
+      "humanReviewRequired": true,
+      "reasoning": "Assessed solely on the wording quoted above (type: Termination & Notice). The clause does not restrain legal proceedings (Section 28, Indian Contract Act, 1872), impose a penalty or unlawful consideration (Sections 23 and 74), and no conflicting statutory text was retrieved for it.",
+      "riskLevel": "NO_ISSUE_DETECTED",
+      "statutoryConflict": {
+        "actName": "N/A",
+        "authorityLevel": "N/A",
+        "precedentCitation": "N/A",
+        "ruleNumber": "N/A",
+        "section": "N/A"
+      }
+    },
+    {
+      "clauseIndex": 6,
+      "clauseType": "Property Conveyance / Transfer",
+      "confidenceScore": 0.95,
+      "deterministicRuleTriggered": false,
+      "finding": "Standard governing law and domestic court jurisdiction clause.",
+      "humanReviewRequired": false,
+      "reasoning": "The clause designates valid domestic territorial jurisdiction under the Code of Civil Procedure and Section 28 of the Indian Contract Act, 1872, fully preserving the parties' right to legal recourse before competent civil courts.",
+      "riskLevel": "NO_ISSUE_DETECTED",
+      "statutoryConflict": {
+        "actName": "N/A",
+        "authorityLevel": "N/A",
+        "precedentCitation": "N/A",
+        "ruleNumber": "N/A",
+        "section": "N/A"
+      }
+    }
+  ],
+  "sanitized_regional_text": "RESIDENTIAL LEASE AGREEMENT\nThis Agreement is made on 1st August 2024 between Mr. S. K. Narayana (Lessor) and Ms. Priyanka Sen (Lessee).\n\n1. Demised Premises: Flat No. 402, Green Glen Heights, Bellandur, Bengaluru.\n2. Monthly Rent & Maintenance: The Lessee shall pay a monthly rent of ₹45,000/- on or before the 5th of each calendar month.\n3. Security Deposit: The Lessee has deposited an interest-free refundable security deposit of ₹3,00,000/- with the Lessor.\n4. Lease Tenure & Lock-in: The lease duration is 11 months with a mandatory lock-in period of 6 months.\n5. Notice Period: Either party may terminate the tenancy by providing 2 months written notice after the lock-in period.\n6. Governing Law: Governed by the Karnataka Rent Control laws and Transfer of Property Act 1882 with jurisdiction in Bengaluru courts.",
+  "structure": {
+    "clauses": [
+      {
+        "clauseHeader": "Demised Premises: Flat No. 402, Green Glen Heights, Bellandur, Bengaluru.",
+        "clauseIndex": 1,
+        "detectedType": "Premises / Schedule Property",
+        "jurisdiction": {
+          "country": "India",
+          "governingLawClausePresent": false,
+          "state": "Karnataka"
+        },
+        "rawText": "1. Demised Premises: Flat No. 402, Green Glen Heights, Bellandur, Bengaluru.",
+        "sanitizedText": "1. Demised Premises: Flat No. 402, Green Glen Heights, Bellandur, Bengaluru."
+      },
+      {
+        "clauseHeader": "Monthly Rent & Maintenance: The Lessee shall pay a monthly rent of ₹45,000/- on or before the 5th of each calendar month.",
+        "clauseIndex": 2,
+        "detectedType": "Financial & Consideration Schedules",
+        "jurisdiction": {
+          "country": "India",
+          "governingLawClausePresent": false,
+          "state": null
+        },
+        "rawText": "2. Monthly Rent & Maintenance: The Lessee shall pay a monthly rent of ₹45,000/- on or before the 5th of each calendar month.",
+        "sanitizedText": "2. Monthly Rent & Maintenance: The Lessee shall pay a monthly rent of ₹45,000/- on or before the 5th of each calendar month."
+      },
+      {
+        "clauseHeader": "Security Deposit: The Lessee has deposited an interest-free refundable security deposit of ₹3,00,000/- with the Lessor.",
+        "clauseIndex": 3,
+        "detectedType": "Financial & Consideration Schedules",
+        "jurisdiction": {
+          "country": "India",
+          "governingLawClausePresent": false,
+          "state": null
+        },
+        "rawText": "3. Security Deposit: The Lessee has deposited an interest-free refundable security deposit of ₹3,00,000/- with the Lessor.",
+        "sanitizedText": "3. Security Deposit: The Lessee has deposited an interest-free refundable security deposit of ₹3,00,000/- with the Lessor."
+      },
+      {
+        "clauseHeader": "Lease Tenure & Lock-in: The lease duration is 11 months with a mandatory lock-in period of 6 months.",
+        "clauseIndex": 4,
+        "detectedType": "Term & Tenure",
+        "jurisdiction": {
+          "country": "India",
+          "governingLawClausePresent": false,
+          "state": null
+        },
+        "rawText": "4. Lease Tenure & Lock-in: The lease duration is 11 months with a mandatory lock-in period of 6 months.",
+        "sanitizedText": "4. Lease Tenure & Lock-in: The lease duration is 11 months with a mandatory lock-in period of 6 months."
+      },
+      {
+        "clauseHeader": "Notice Period: Either party may terminate the tenancy by providing 2 months written notice after the lock-in period.",
+        "clauseIndex": 5,
+        "detectedType": "Termination & Notice",
+        "jurisdiction": {
+          "country": "India",
+          "governingLawClausePresent": false,
+          "state": null
+        },
+        "rawText": "5. Notice Period: Either party may terminate the tenancy by providing 2 months written notice after the lock-in period.",
+        "sanitizedText": "5. Notice Period: Either party may terminate the tenancy by providing 2 months written notice after the lock-in period."
+      },
+      {
+        "clauseHeader": "Governing Law: Governed by the Karnataka Rent Control laws and Transfer of Property Act 1882 with jurisdiction in Bengaluru courts.",
+        "clauseIndex": 6,
+        "detectedType": "Property Conveyance / Transfer",
+        "jurisdiction": {
+          "country": "India",
+          "governingLawClausePresent": true,
+          "state": "Karnataka"
+        },
+        "rawText": "6. Governing Law: Governed by the Karnataka Rent Control laws and Transfer of Property Act 1882 with jurisdiction in Bengaluru courts.",
+        "sanitizedText": "6. Governing Law: Governed by the Karnataka Rent Control laws and Transfer of Property Act 1882 with jurisdiction in Bengaluru courts."
+      }
+    ],
+    "parties": [],
+    "preamble": "RESIDENTIAL LEASE AGREEMENT\nThis Agreement is made on 1st August 2024 between Mr. S. K. Narayana (Lessor) and Ms. Priyanka Sen (Lessee)."
+  },
+  "summary_output": {
+    "deadlinesAndMilestones": [
+      "Tenure: period of 6 months",
+      "Lock-in Period: lock-in period of 6 months"
+    ],
+    "executiveSummary": "This is a Rental Agreement entered into between the executing parties detailing the transfer of rights, statutory compliance, consideration, and covenants under Indian law.",
+    "financialTerms": [
+      {
+        "amount": "₹45,000/-",
+        "deadline": "Payable on 5th of",
+        "description": "Monthly Rent"
+      },
+      {
+        "amount": "₹3,00,000/-",
+        "deadline": "Payable on 5th of",
+        "description": "Security Deposit"
+      },
+      {
+        "amount": "₹45,000/-",
+        "deadline": "Payable on 5th of",
+        "description": "Maintenance Charges"
+      }
+    ],
+    "governingLaw": "Governed by Karnataka Rent Control laws and Transfer of Property Act 1882 with jurisdiction in Bengaluru courts",
+    "obligations": [
+      "Tenant shall pay agreed monthly rent on or before the due date",
+      "Tenant shall pay electricity (BESCOM), water, and periodic maintenance charges",
+      "Tenant shall not carry out unauthorized structural alterations or sublet the premises",
+      "Affirmative Duty: a monthly rent of ₹45,000/- on or before the 5th of each calendar month"
+    ],
+    "rights": [
+      "Tenant receives quiet enjoyment and peaceful possession of the demised premises",
+      "Tenant is entitled to prompt refund of interest-free security deposit upon peaceful handover",
+      "Lessor / Tenant inspection rights permitted upon prior reasonable notice"
+    ],
+    "terminationConditions": [
+      "Termination permitted upon 2 months written notice in writing"
+    ]
+  },
+  "translated_text": "RESIDENTIAL LEASE AGREEMENT\nThis Agreement is made on 1st August 2024 between Mr. S. K. Narayana (Lessor) and Ms. Priyanka Sen (Lessee).\n\n1. Demised Premises: Flat No. 402, Green Glen Heights, Bellandur, Bengaluru.\n2. Monthly Rent & Maintenance: The Lessee shall pay a monthly rent of ₹45,000/- on or before the 5th of each calendar month.\n3. Security Deposit: The Lessee has deposited an interest-free refundable security deposit of ₹3,00,000/- with the Lessor.\n4. Lease Tenure & Lock-in: The lease duration is 11 months with a mandatory lock-in period of 6 months.\n5. Notice Period: Either party may terminate the tenancy by providing 2 months written notice after the lock-in period.\n6. Governing Law: Governed by the Karnataka Rent Control laws and Transfer of Property Act 1882 with jurisdiction in Bengaluru courts."
+}
