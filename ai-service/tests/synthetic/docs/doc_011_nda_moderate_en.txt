@@ -1,0 +1,17 @@
+DOCUMENT ID: 11
+DOMAIN: NDA
+
+ARTICLE 1 - Confidential Information
+Includes all non-public information disclosed by either party.
+
+ARTICLE 2 - Obligations
+Both parties agree to use reasonable care to protect confidential information.
+
+ARTICLE 3 - Term
+Confidentiality obligations will survive forever.
+
+ARTICLE 4 - Remedies
+Parties may seek injunctive relief for breach.
+
+ARTICLE 5 - Governing Law
+Governed by the laws of India.

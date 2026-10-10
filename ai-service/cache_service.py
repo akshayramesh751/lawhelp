@@ -4,7 +4,7 @@ import json
 import time
 from typing import Optional, Dict, Any
 
-PROMPT_VERSION = "v2.1_grounded"
+PROMPT_VERSION = "v3.0_clause_specific_nodup"
 
 class ContextAwareCache:
     """

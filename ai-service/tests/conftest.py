@@ -30,7 +30,7 @@ def offline_environment():
     os.environ["LLM_PROVIDER"] = "auto"
     
     # Disable feature flags for baseline (legacy behavior)
-    os.environ.setdefault("KN_NORMALIZER_V2", "0")
+    os.environ["KN_NORMALIZER_V2"] = "1"
     os.environ.setdefault("CLAUSE_SEGMENTER_V2", "0")
     os.environ.setdefault("RULE_PACKS_V2", "0")
     

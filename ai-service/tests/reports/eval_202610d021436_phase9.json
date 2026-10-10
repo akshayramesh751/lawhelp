@@ -1,0 +1,82 @@
+{
+  "run_name": "phase9",
+  "timestamp": "2026-10-11T02:14:36.000437",
+  "splits": {
+    "dev": {
+      "total": 21,
+      "segmentation_correct": 15,
+      "risk_exact_match": 95,
+      "flagged": 0,
+      "true_positives": 0,
+      "false_positives": 0,
+      "false_negatives": 16,
+      "controls_flagged": 0,
+      "precision": 0,
+      "recall": 0.0,
+      "f1": 0
+    },
+    "heldout": {
+      "total": 7,
+      "segmentation_correct": 5,
+      "risk_exact_match": 30,
+      "flagged": 0,
+      "true_positives": 0,
+      "false_positives": 0,
+      "false_negatives": 7,
+      "controls_flagged": 0,
+      "precision": 0,
+      "recall": 0.0,
+      "f1": 0
+    }
+  },
+  "domain_results": {
+    "employment": {
+      "total": 8,
+      "risk_exact_match": 34,
+      "segmentation_correct": 3
+    },
+    "rental": {
+      "total": 8,
+      "risk_exact_match": 41,
+      "segmentation_correct": 7
+    },
+    "nda": {
+      "total": 4,
+      "risk_exact_match": 17,
+      "segmentation_correct": 4
+    },
+    "vendor_msa": {
+      "total": 4,
+      "risk_exact_match": 16,
+      "segmentation_correct": 3
+    },
+    "criminal_bond": {
+      "total": 4,
+      "risk_exact_match": 17,
+      "segmentation_correct": 3
+    }
+  },
+  "avg_severity": {
+    "control": 0.0,
+    "mild": 0.0,
+    "moderate": 0.0,
+    "extreme": 0.0
+  },
+  "confusion_matrix": {
+    "NO_ISSUE_DETECTED": {
+      "NO_ISSUE_DETECTED": 125
+    },
+    "ONE_SIDED": {
+      "NO_ISSUE_DETECTED": 11
+    },
+    "HIGH_RISK": {
+      "NO_ISSUE_DETECTED": 8
+    },
+    "REQUIRES_REVIEW": {
+      "NO_ISSUE_DETECTED": 2
+    },
+    "POTENTIALLY_UNENFORCEABLE": {
+      "NO_ISSUE_DETECTED": 2
+    }
+  }
+}

@@ -2,13 +2,18 @@ import json
 import re
 import os
 
-# Try importing transformers for Tier 3, but don't break if not installed yet
-try:
-    from transformers import pipeline
-    zero_shot_classifier = pipeline("zero-shot-classification", model="facebook/bart-large-mnli")
-    HAS_TRANSFORMERS = True
-except ImportError:
-    HAS_TRANSFORMERS = False
+_zero_shot_pipeline = None
+
+def get_zero_shot_classifier():
+    global _zero_shot_pipeline
+    if _zero_shot_pipeline is None:
+        try:
+            from transformers import pipeline
+            _zero_shot_pipeline = pipeline("zero-shot-classification", model="facebook/bart-large-mnli")
+        except Exception as e:
+            print(f"[Classifier] Failed to load zero-shot pipeline: {e}")
+            _zero_shot_pipeline = False
+    return _zero_shot_pipeline if _zero_shot_pipeline is not False else None
 
 class LegalClassifier:
     def __init__(self, taxonomy_path="taxonomy.json"):
@@ -24,30 +29,27 @@ class LegalClassifier:
         return text.strip()
 
     def tier1_header_match(self, text: str):
-        """Tier 1: High-Confidence Header Match in the first 10% of the document"""
-        # Get first 10% or at least first 500 characters
-        search_limit = max(500, int(len(text) * 0.10))
-        header_text = text[:search_limit]
+        """Tier 1: High-Confidence Header Match in the first 10-20% of the document"""
+        search_limit = max(2500, int(len(text) * 0.20))
+        header_text = text[:search_limit].lower()
 
         for domain, headers in self.taxonomy['headers'].items():
             for header in headers:
-                if header.lower() in header_text:
+                pattern = r'(?:\b|^)' + re.escape(header.lower()) + r'(?:\b|$)'
+                if re.search(pattern, header_text, re.IGNORECASE):
                     return {"domain": domain, "confidence": 1.0, "method": "Tier1_HeaderMatch"}
         return None
 
     def tier2_weighted_scoring(self, text: str):
         """Tier 2: Weighted Term Frequency Scoring"""
-        # Scan first ~2 pages (approx 6000 chars)
-        scan_text = text[:6000]
+        scan_text = text[:6000].lower()
         
         scores = {domain: 0 for domain in self.taxonomy['domains']}
         
         for domain, keywords in self.taxonomy['weighted_keywords'].items():
             for keyword, weight in keywords.items():
-                # Sliding window anchor search: count occurrences of the phrase
-                # Regex word boundary to avoid partial matches
                 pattern = r'\b' + re.escape(keyword.lower()) + r'\b'
-                matches = len(re.findall(pattern, scan_text))
+                matches = len(re.findall(pattern, scan_text, re.IGNORECASE))
                 scores[domain] += (matches * weight)
 
         # Find the highest scoring domain
@@ -79,14 +81,14 @@ class LegalClassifier:
 
     def tier3_zero_shot(self, text: str, candidate_labels: list):
         """Tier 3: Intelligent Fallback using Zero-Shot MNLI (First 512 tokens)"""
-        if not HAS_TRANSFORMERS:
+        classifier = get_zero_shot_classifier()
+        if not classifier:
             return {"domain": "Unknown (Tie/Low Confidence)", "confidence": 0.0, "method": "Tier3_Unavailable_Missing_Transformers"}
             
-        # Approx 512 tokens is roughly 2000 characters
         snippet = text[:2000]
         
         try:
-            result = zero_shot_classifier(snippet, candidate_labels)
+            result = classifier(snippet, candidate_labels)
             best_label = result['labels'][0]
             best_score = result['scores'][0]
             return {
@@ -115,15 +117,39 @@ class LegalClassifier:
             del t2_result["scores"]
             return t2_result
             
-        # Tier 3 (Tie-Breaker or No clear winner)
-        t3_result = self.tier3_zero_shot(clean_text, self.taxonomy['domains'])
-        if t3_result:
-            return t3_result
+        # Tier 3: Grounded LLM Classification
+        try:
+            from llm_gateway import llm_gateway
+            prompt = (
+                f"Identify the exact legal document category for the following Indian legal text excerpt. "
+                f"Candidate categories include: 'Sale Deed', 'Rental Agreement', 'Employment Contract', "
+                f"'Court Pleading / Original Suit (OS)', 'Legal Notice', 'Non-Disclosure Agreement', "
+                f"'Power of Attorney', 'Settlement Agreement', 'Gift Deed'.\n\n"
+                f"TEXT EXCERPT:\n\"\"\"{clean_text[:2500]}\"\"\"\n\n"
+                f"Respond with pure JSON adhering to: {{\"domain\": \"category name\", \"confidence\": 0.95}}"
+            )
+            llm_res = llm_gateway.generate_json(
+                "You are an expert Indian Legal Document Classifier. Respond strictly in pure JSON.",
+                prompt
+            )
+            if llm_res and llm_res.get("domain") and llm_res.get("domain") != "Unclassified":
+                return {
+                    "domain": str(llm_res.get("domain")),
+                    "confidence": float(llm_res.get("confidence", 0.95)),
+                    "method": "Tier3_Grounded_LLM_Classification"
+                }
+        except Exception as e:
+            print(f"[Classifier] LLM Classification fallback error: {e}")
+
+        # Tier 4: Zero-Shot MNLI (if transformers installed)
+        t4_result = self.tier3_zero_shot(clean_text, self.taxonomy['domains'])
+        if t4_result and t4_result.get("confidence", 0) > 0.4:
+            return t4_result
             
         # Ultimate Fallback
         return {
-            "domain": "Unclassified",
-            "confidence": 0.0,
+            "domain": "Legal Document",
+            "confidence": 0.5,
             "method": "Fallback"
         }
 

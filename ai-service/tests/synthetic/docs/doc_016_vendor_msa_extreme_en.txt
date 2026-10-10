@@ -1,0 +1,17 @@
+DOCUMENT ID: 16
+DOMAIN: VENDOR_MSA
+
+1) SERVICES
+Vendor shall provide IT support services as defined in Annexure A.
+
+1) Payment Terms
+Payment shall be made within 30 days of invoice.
+
+1) LIABILITY
+The vendor liability shall not be limited. The client bears zero liability under any circumstances.
+
+1) Termination
+Client may terminate immediately without notice. Vendor has no right to terminate.
+
+1) GOVERNING LAW
+Governed by the laws of India.

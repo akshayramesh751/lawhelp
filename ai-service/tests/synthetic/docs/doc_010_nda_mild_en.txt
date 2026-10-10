@@ -1,0 +1,17 @@
+DOCUMENT ID: 10
+DOMAIN: NDA
+
+CONFIDENTIAL INFORMATION
+Includes all non-public information disclosed by either party.
+
+Obligations
+The Receiving Party must protect information with the highest degree of care.
+
+TERM
+Confidentiality survives for 3 years after the termination of this agreement.
+
+Remedies
+Parties may seek injunctive relief for breach.
+
+GOVERNING LAW
+Governed by the laws of India.

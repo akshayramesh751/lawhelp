@@ -1,4 +1,5 @@
 import re
+import os
 from typing import Optional, Dict, Any
 
 def evaluate_deterministic_rules(clause_text: str, domain: Optional[str] = None, state: Optional[str] = None, country: str = "India") -> Optional[Dict[str, Any]]:
@@ -234,6 +235,32 @@ def evaluate_deterministic_rules(clause_text: str, domain: Optional[str] = None,
                 "confidenceScore": 0.98,
                 "humanReviewRequired": False
             }
+
+    use_rule_packs_v2 = os.environ.get("RULE_PACKS_V2", "0") == "1"
+    if use_rule_packs_v2:
+        try:
+            from rule_packs import evaluate_v2_rules
+            v2_result = evaluate_v2_rules(clause_text, domain)
+            if v2_result:
+                # Shape it properly for rule_engine output
+                return {
+                    "deterministicRuleTriggered": True,
+                    "riskLevel": v2_result["riskLevel"],
+                    "finding": v2_result["finding"],
+                    "statutoryConflict": {
+                        "actName": v2_result["actName"] if v2_result["actName"] != "N/A" else "N/A",
+                        "section": "N/A",
+                        "ruleNumber": "N/A",
+                        "precedentCitation": "N/A",
+                        "authorityLevel": "STATUTE" if v2_result["actName"] != "N/A" else "N/A"
+                    },
+                    "statutoryCitation": v2_result["actName"],
+                    "reasoning": v2_result["reasoning"],
+                    "confidenceScore": v2_result["confidence"],
+                    "humanReviewRequired": True if v2_result["riskLevel"] in ["REQUIRES_REVIEW", "ONE_SIDED", "POTENTIALLY_UNENFORCEABLE"] else False
+                }
+        except Exception as e:
+            print("V2 rule packs failed:", e)
 
     # No deterministic rule triggered; route to Route B
     return None

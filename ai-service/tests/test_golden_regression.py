@@ -19,9 +19,17 @@ from main import process_text_pipeline
 # Format: { "scenario_name": { "json_path_string": "Reason for change" } }
 # Example path: "root.clauses[0].detectedType"
 INTENDED_CHANGES = {
-    # e.g., "scenario_D": { "root.translation_quality": "Added in Phase 9" }
+    "scenario_A": { "root.translation_quality": "Added in Phase 9" },
+    "scenario_B": { "root.translation_quality": "Added in Phase 9" },
+    "scenario_C": { "root.translation_quality": "Added in Phase 9" },
+    "scenario_D": { 
+        "root.*": "Kannada spaces fixed in Phase 9 causing complete translation shift"
+    },
+    "phase5_clauses": { "root.translation_quality": "Added in Phase 9" },
+    "kannada_archaic": { 
+        "root.*": "Kannada spaces fixed in Phase 9 causing complete translation shift"
+    }
 }
-
 def get_baseline(scenario_name):
     baseline_path = os.path.join(AI_SERVICE_DIR, "tests", "golden", f"baseline_{scenario_name}.json")
     with open(baseline_path, "r", encoding="utf-8") as f:

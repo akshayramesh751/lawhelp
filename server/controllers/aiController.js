@@ -1,9 +1,12 @@
+const path = require('path');
 const Tesseract = require('tesseract.js');
 const { v4: uuidv4 } = require('uuid');
 const crypto = require('crypto');
 const { uploadToS3, downloadFromS3, deleteFromS3 } = require('../utils/s3');
 const OriginalDocument = require('../models/OriginalDocument');
 const DocumentSummary = require('../models/DocumentSummary');
+
+const serverDir = path.resolve(__dirname, '..');
 
 const extractText = async (req, res) => {
     let documentId = null;
@@ -53,6 +56,11 @@ const extractText = async (req, res) => {
             }
             
             const fileBuffer = firstFile.buffer;
+            if (!fileBuffer || fileBuffer.length < 100) {
+                await OriginalDocument.updateMany({ documentId }, { status: 'failed' });
+                return res.status(400).json({ message: `The uploaded PDF is empty or corrupted (${fileBuffer ? fileBuffer.length : 0} bytes). If the file lives in OneDrive/Google Drive, make sure it is fully downloaded locally, then re-upload.` });
+            }
+
             
             // ==========================================
             // NATIVE-FIRST ROUTING (PDFs -> Python)
@@ -71,17 +79,55 @@ const extractText = async (req, res) => {
                 });
 
                 if (aiResponse.status === 422) {
-                    // Python detected a scanned PDF (low text density). Fall back to Tesseract OCR!
-                    console.log("Python reported Scanned PDF. Falling back to OCR...");
-                    const result = await Tesseract.recognize(fileBuffer, 'eng+kan');
-                    extractedText = result.data.text;
+                    // Python detected a scanned PDF (low text density). Fall back to Tesseract OCR using rendered page images!
+                    console.log("Python reported Scanned PDF. Converting page images to OCR...");
+                    const errorData = await aiResponse.json();
+                    const pageImagesBase64 = errorData.detail?.page_images || [];
+                    const pageIndices = errorData.detail?.page_indices || pageImagesBase64.map((_, i) => i);
+                    const nativePages = errorData.detail?.native_pages || [];
+                    const ocrByPage = {};
+
+                    for (let i = 0; i < pageImagesBase64.length; i++) {
+                        const imgBuffer = Buffer.from(pageImagesBase64[i], 'base64');
+                        const pageNo = pageIndices[i];
+                        try {
+                            const r = await Tesseract.recognize(imgBuffer, 'eng+kan', { langPath: serverDir });
+                            if (r.data?.text?.trim()) ocrByPage[pageNo] = r.data.text.trim();
+                        } catch (ocrErr) {
+                            console.warn(`[OCR Warning] Page ${pageNo + 1} eng+kan error, retrying eng:`, ocrErr.message);
+                            try {
+                                const r2 = await Tesseract.recognize(imgBuffer, 'eng', { langPath: serverDir });
+                                if (r2.data?.text?.trim()) ocrByPage[pageNo] = r2.data.text.trim();
+                            } catch (e2) {
+                                console.warn(`[OCR Warning] Page ${pageNo + 1} retry failed:`, e2.message);
+                            }
+                        }
+                    }
+
+                    // Merge: per page, native text + OCR of that page's images (keeps stamp-paper text AND scanned body)
+                    const totalPages = Math.max(nativePages.length, ...Object.keys(ocrByPage).map(k => Number(k) + 1), 0);
+                    const merged = [];
+                    for (let p = 0; p < totalPages; p++) {
+                        const parts = [];
+                        if (nativePages[p] && nativePages[p].trim()) parts.push(nativePages[p].trim());
+                        if (ocrByPage[p]) parts.push(ocrByPage[p]);
+                        if (parts.length) merged.push(`--- PAGE ${p + 1} ---\n${parts.join('\n')}`);
+                    }
+                    extractedText = merged.join('\n\n');
+                    if (errorData.detail?.truncated) console.warn('[OCR] Document had more image pages than the OCR cap; remaining pages skipped.');
+                    if (!extractedText.trim()) {
+                        throw new Error('Unable to extract legible text from scanned document pages.');
+                    }
                     
                     // Route the extracted text via Text-First routing
                     aiResult = await sendTextToPython(extractedText);
                 } else if (!aiResponse.ok) {
-                    console.error('Python AI Engine error:', aiResponse.statusText);
+                    const errBody = await aiResponse.text().catch(() => '');
+                    console.error(`Python AI Engine error ${aiResponse.status}:`, errBody);
                     await OriginalDocument.updateMany({ documentId }, { status: 'failed' });
-                    return res.status(500).json({ message: 'Error processing PDF natively' });
+                    let detail = '';
+                    try { const j = JSON.parse(errBody); detail = typeof j.detail === 'string' ? j.detail : (j.detail?.message || ''); } catch (_) {}
+                    return res.status(aiResponse.status === 400 ? 400 : 500).json({ message: `Error processing PDF natively${detail ? ': ' + detail : ''}` });
                 } else {
                     aiResult = await aiResponse.json();
                 }
@@ -98,13 +144,33 @@ const extractText = async (req, res) => {
                 return res.status(400).json({ message: 'Cannot mix PDFs and images. Please upload up to 5 images OR 1 PDF.' });
             }
             
-            // Process scanned images using Tesseract OCR concurrently
-            console.log(`Processing ${req.files.length} image(s)...`);
-            const ocrPromises = req.files.map(file => Tesseract.recognize(file.buffer, 'eng+kan'));
-            const results = await Promise.all(ocrPromises);
+            // Process scanned images using Tesseract OCR sequentially
+            console.log(`Processing ${req.files.length} image(s) sequentially...`);
+            const ocrTexts = [];
+            for (let i = 0; i < req.files.length; i++) {
+                try {
+                    const r = await Tesseract.recognize(req.files[i].buffer, 'eng+kan', { langPath: serverDir });
+                    if (r.data?.text?.trim()) {
+                        ocrTexts.push(`--- PAGE ${i + 1} ---\n${r.data.text.trim()}`);
+                    }
+                } catch (ocrErr) {
+                    console.warn(`[OCR Warning] Image ${i + 1} eng+kan error, retrying eng:`, ocrErr.message);
+                    try {
+                        const r2 = await Tesseract.recognize(req.files[i].buffer, 'eng', { langPath: serverDir });
+                        if (r2.data?.text?.trim()) {
+                            ocrTexts.push(`--- PAGE ${i + 1} ---\n${r2.data.text.trim()}`);
+                        }
+                    } catch (e2) {
+                        console.warn(`[OCR Warning] Image ${i + 1} retry failed:`, e2.message);
+                    }
+                }
+            }
             
             // Combine extracted text with page separators
-            extractedText = results.map((result, idx) => `--- PAGE ${idx + 1} ---\n${result.data.text}`).join('\n\n');
+            extractedText = ocrTexts.join('\n\n');
+            if (!extractedText.trim()) {
+                throw new Error('Unable to extract legible text from uploaded image(s).');
+            }
             
             // Route extracted text to Python AI Engine
             aiResult = await sendTextToPython(extractedText);
@@ -130,14 +196,21 @@ const extractText = async (req, res) => {
         const preambleText = aiResult.structure?.preamble || '';
         const partiesList = aiResult.structure?.parties || [];
         const clausesList = aiResult.structure?.clauses || [];
-        const primaryLessor = partiesList.find(p => p.role.includes('Lessor') || p.role.includes('Owner'))?.name || 'Rajesh Kumar Sharma';
-        const primaryLessee = partiesList.find(p => p.role.includes('Lessee') || p.role.includes('Tenant'))?.name || 'Ananya Priyadarshini Iyer';
+        const primaryLessor = partiesList.find(p => p.role.includes('Lessor') || p.role.includes('Owner') || p.role.includes('Vendor'))?.name || partiesList[0]?.name || 'Executing Party 1';
+        const primaryLessee = partiesList.find(p => p.role.includes('Lessee') || p.role.includes('Tenant') || p.role.includes('Purchaser'))?.name || partiesList[1]?.name || 'Executing Party 2';
 
         // Create and save DocumentSummary record
         const docClassification = aiResult.classification || {
-            domain: originalDocs[0]?.fileName?.toLowerCase().includes('rent') ? 'Rental Agreement' :
-                    originalDocs[0]?.fileName?.toLowerCase().includes('nda') ? 'Non-Disclosure Agreement (NDA)' :
-                    originalDocs[0]?.fileName?.toLowerCase().includes('service') ? 'Service Level Agreement' : 'Employment Contract',
+            domain: (function() {
+                const fn = (originalDocs[0]?.fileName || '').toLowerCase();
+                if (fn.includes('sale') || fn.includes('deed')) return 'Sale Deed';
+                if (fn.includes('os') || fn.includes('suit') || fn.includes('court') || fn.includes('plaint')) return 'Court Pleading / Original Suit (OS)';
+                if (fn.includes('rent') || fn.includes('lease')) return 'Rental Agreement';
+                if (fn.includes('nda')) return 'Non-Disclosure Agreement (NDA)';
+                if (fn.includes('service')) return 'Service Level Agreement';
+                if (fn.includes('employ') || fn.includes('offer')) return 'Employment Contract';
+                return 'Legal Agreement';
+            })(),
             confidence: 0.95,
             method: 'Hybrid-Taxonomy'
         };
@@ -209,17 +282,21 @@ const getClassificationForSummary = (summary) => {
         (summary.structure?.clauses?.map(c => (c.clauseHeader || '') + ' ' + (c.detectedType || '')).join(' ') || '')
     ).toLowerCase();
 
-    let domain = 'Employment Contract';
-    if (textSnippet.includes('rent') || textSnippet.includes('lease') || textSnippet.includes('tenan') || textSnippet.includes('landlord') || textSnippet.includes('premise') || textSnippet.includes('lessor') || textSnippet.includes('lessee')) {
+    let domain = 'Legal Agreement';
+    if (textSnippet.includes('sale deed') || textSnippet.includes('deed of sale') || textSnippet.includes('conveyance') || textSnippet.includes('absolute sale')) {
+        domain = 'Sale Deed';
+    } else if (textSnippet.includes('original suit') || textSnippet.includes('o.s.') || textSnippet.includes('os ') || textSnippet.includes('court') || textSnippet.includes('plaint') || textSnippet.includes('pleading') || textSnippet.includes('petition')) {
+        domain = 'Court Pleading / Original Suit (OS)';
+    } else if (textSnippet.includes('rent') || textSnippet.includes('lease') || textSnippet.includes('tenan') || textSnippet.includes('landlord') || textSnippet.includes('premise') || textSnippet.includes('lessor') || textSnippet.includes('lessee')) {
         domain = 'Rental Agreement';
     } else if (textSnippet.includes('nda') || textSnippet.includes('non-disclosure') || textSnippet.includes('confidential')) {
         domain = 'Non-Disclosure Agreement (NDA)';
-    } else if (textSnippet.includes('service') || textSnippet.includes('vendor') || textSnippet.includes('contractor') || textSnippet.includes('freelance') || textSnippet.includes('consult')) {
+    } else if (textSnippet.includes('service') || textSnippet.includes('contractor') || textSnippet.includes('freelance') || textSnippet.includes('consult')) {
         domain = 'Service Level Agreement';
-    } else if (textSnippet.includes('employ') || textSnippet.includes('salary') || textSnippet.includes('probation') || textSnippet.includes('job') || textSnippet.includes('work') || textSnippet.includes('employee')) {
+    } else if (textSnippet.includes('employ') || textSnippet.includes('remuneration') || textSnippet.includes('probation') || textSnippet.includes('offer letter') || textSnippet.includes('employee')) {
         domain = 'Employment Contract';
-    } else if (textSnippet.includes('partnership') || textSnippet.includes('shareholder') || textSnippet.includes('sale deed')) {
-        domain = 'Commercial Agreement';
+    } else if (textSnippet.includes('notice') || textSnippet.includes('demand')) {
+        domain = 'Legal Notice';
     }
 
     return {
@@ -232,7 +309,7 @@ const getClassificationForSummary = (summary) => {
 /**
  * Helper function to send OCR-extracted text to Python AI Engine for processing
  */
-const sendTextToPython = async (text) => {
+async function sendTextToPython(text) {
     try {
         const response = await fetch('http://localhost:8000/process-document', {
             method: 'POST',
@@ -366,9 +443,42 @@ const reprocessDocument = async (req, res) => {
                 });
 
                 if (aiResponse.status === 422) {
-                    console.log("[Reprocessing] Scanned PDF. Falling back to OCR...");
-                    const result = await Tesseract.recognize(fileBuffer, 'eng');
-                    extractedText = result.data.text;
+                    console.log("[Reprocessing] Scanned PDF. Converting page images to OCR...");
+                    const errorData = await aiResponse.json();
+                    const pageImagesBase64 = errorData.detail?.page_images || [];
+
+                    if (pageImagesBase64.length > 0) {
+                        const ocrTexts = [];
+                        for (let i = 0; i < pageImagesBase64.length; i++) {
+                            const imgBuffer = Buffer.from(pageImagesBase64[i], 'base64');
+                            try {
+                                const r = await Tesseract.recognize(imgBuffer, 'eng+kan', {
+                                    langPath: serverDir
+                                });
+                                if (r.data?.text?.trim()) {
+                                    ocrTexts.push(`--- PAGE ${i + 1} ---\n${r.data.text.trim()}`);
+                                }
+                            } catch (ocrErr) {
+                                console.warn(`[Reprocessing OCR Warning] Page ${i + 1} eng+kan error, retrying eng:`, ocrErr.message);
+                                try {
+                                    const r2 = await Tesseract.recognize(imgBuffer, 'eng', { langPath: serverDir });
+                                    if (r2.data?.text?.trim()) {
+                                        ocrTexts.push(`--- PAGE ${i + 1} ---\n${r2.data.text.trim()}`);
+                                    }
+                                } catch (e2) {
+                                    console.warn(`[Reprocessing OCR Warning] Page ${i + 1} retry failed:`, e2.message);
+                                }
+                            }
+                        }
+                        extractedText = ocrTexts.join('\n\n');
+                    } else {
+                        throw new Error('Scanned PDF detected but no page images were generated for OCR.');
+                    }
+
+                    if (!extractedText.trim()) {
+                        throw new Error('Unable to extract legible text from scanned document pages.');
+                    }
+
                     aiResult = await sendTextToPython(extractedText);
                 } else if (!aiResponse.ok) {
                     console.error('[Reprocessing] Python error:', aiResponse.statusText);
@@ -383,11 +493,31 @@ const reprocessDocument = async (req, res) => {
                 return res.status(500).json({ message: 'AI reprocessing failed natively' });
             }
         } else if (mimeType.startsWith('image/')) {
-            console.log(`[Reprocessing] Running OCR concurrently on ${fileBuffers.length} images...`);
-            const ocrPromises = fileBuffers.map(file => Tesseract.recognize(file.buffer, 'eng'));
-            const results = await Promise.all(ocrPromises);
+            console.log(`[Reprocessing] Running OCR sequentially on ${fileBuffers.length} images...`);
+            const ocrTexts = [];
+            for (let i = 0; i < fileBuffers.length; i++) {
+                try {
+                    const r = await Tesseract.recognize(fileBuffers[i].buffer, 'eng+kan', { langPath: serverDir });
+                    if (r.data?.text?.trim()) {
+                        ocrTexts.push(`--- PAGE ${i + 1} ---\n${r.data.text.trim()}`);
+                    }
+                } catch (ocrErr) {
+                    console.warn(`[Reprocessing OCR Warning] Image ${i + 1} eng+kan error, retrying eng:`, ocrErr.message);
+                    try {
+                        const r2 = await Tesseract.recognize(fileBuffers[i].buffer, 'eng', { langPath: serverDir });
+                        if (r2.data?.text?.trim()) {
+                            ocrTexts.push(`--- PAGE ${i + 1} ---\n${r2.data.text.trim()}`);
+                        }
+                    } catch (e2) {
+                        console.warn(`[Reprocessing OCR Warning] Image ${i + 1} retry failed:`, e2.message);
+                    }
+                }
+            }
             
-            extractedText = results.map((result, idx) => `--- PAGE ${idx + 1} ---\n${result.data.text}`).join('\n\n');
+            extractedText = ocrTexts.join('\n\n');
+            if (!extractedText.trim()) {
+                throw new Error('Unable to extract legible text from images.');
+            }
             aiResult = await sendTextToPython(extractedText);
         } else {
             await OriginalDocument.updateMany({ documentId }, { status: 'failed' });
@@ -405,8 +535,6 @@ const reprocessDocument = async (req, res) => {
         const preambleText = aiResult.structure?.preamble || '';
         const partiesList = aiResult.structure?.parties || [];
         const clausesList = aiResult.structure?.clauses || [];
-        const primaryLessor = partiesList.find(p => p.role.includes('Lessor') || p.role.includes('Owner'))?.name || 'Rajesh Kumar Sharma';
-        const primaryLessee = partiesList.find(p => p.role.includes('Lessee') || p.role.includes('Tenant'))?.name || 'Ananya Priyadarshini Iyer';
 
         // Upsert DocumentSummary
         const updatedSummary = await DocumentSummary.findOneAndUpdate(

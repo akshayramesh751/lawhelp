@@ -1,0 +1,17 @@
+DOCUMENT ID: 14
+DOMAIN: VENDOR_MSA
+
+1) SERVICES
+Vendor shall provide IT support services as defined in Annexure A.
+
+1) Payment Terms
+Payment shall be made within 90 days of invoice.
+
+1) LIABILITY
+Liability of both parties is limited to the total contract value.
+
+1) Termination
+Either party may terminate for convenience with 30 days notice.
+
+1) GOVERNING LAW
+Governed by the laws of India.

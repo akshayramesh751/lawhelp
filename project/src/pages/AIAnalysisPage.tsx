@@ -1037,12 +1037,16 @@ export default function AIAnalysisPage({ onNavigate }: { onNavigate: (page: stri
                     <UserCheck size={16} /> Legal & Operational Rights
                   </div>
                   <ul className="space-y-2 text-xs text-gray-300">
-                    {summaryOutput.rights.map((r, i) => (
-                      <li key={i} className="flex items-start gap-2">
-                        <Check size={14} className="text-emerald-400 shrink-0 mt-0.5" />
-                        <span>{r}</span>
-                      </li>
-                    ))}
+                    {summaryOutput.rights && summaryOutput.rights.length > 0 ? (
+                      summaryOutput.rights.map((r, i) => (
+                        <li key={i} className="flex items-start gap-2">
+                          <Check size={14} className="text-emerald-400 shrink-0 mt-0.5" />
+                          <span>{r}</span>
+                        </li>
+                      ))
+                    ) : (
+                      <li className="text-gray-400 italic">No explicit operational rights specified.</li>
+                    )}
                   </ul>
                 </div>
 
@@ -1052,12 +1056,16 @@ export default function AIAnalysisPage({ onNavigate }: { onNavigate: (page: stri
                     <Shield size={16} /> Affirmative Duties & Restrictive Covenants
                   </div>
                   <ul className="space-y-2 text-xs text-gray-300">
-                    {summaryOutput.obligations.map((o, i) => (
-                      <li key={i} className="flex items-start gap-2">
-                        <span className="text-purple-400 font-bold">•</span>
-                        <span>{o}</span>
-                      </li>
-                    ))}
+                    {summaryOutput.obligations && summaryOutput.obligations.length > 0 ? (
+                      summaryOutput.obligations.map((o, i) => (
+                        <li key={i} className="flex items-start gap-2">
+                          <span className="text-purple-400 font-bold">•</span>
+                          <span>{o}</span>
+                        </li>
+                      ))
+                    ) : (
+                      <li className="text-gray-400 italic">No explicit affirmative duties or covenants specified.</li>
+                    )}
                   </ul>
                 </div>
               </div>
@@ -1067,17 +1075,21 @@ export default function AIAnalysisPage({ onNavigate }: { onNavigate: (page: stri
                 <div className="flex items-center gap-2 mb-3 text-gold font-bold text-sm">
                   <DollarSign size={16} /> Financial Schedules & Compensation
                 </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  {summaryOutput.financialTerms.map((f, i) => (
-                    <div key={i} className="bg-[#090e1c] p-3.5 rounded-lg border border-white/[0.03]">
-                      <p className="text-xs text-gray-400 font-medium">{f.description}</p>
-                      <p className="text-lg font-bold text-white mt-1">{f.amount}</p>
-                      <p className="text-[11px] text-gray-500 mt-1 flex items-center gap-1">
-                        <Clock size={12} /> {f.deadline}
-                      </p>
-                    </div>
-                  ))}
-                </div>
+                {summaryOutput.financialTerms && summaryOutput.financialTerms.length > 0 ? (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    {summaryOutput.financialTerms.map((f, i) => (
+                      <div key={i} className="bg-[#090e1c] p-3.5 rounded-lg border border-white/[0.03]">
+                        <p className="text-xs text-gray-400 font-medium">{f.description}</p>
+                        <p className="text-lg font-bold text-white mt-1">{f.amount}</p>
+                        <p className="text-[11px] text-gray-500 mt-1 flex items-center gap-1">
+                          <Clock size={12} /> {f.deadline}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-xs text-gray-400 italic">No explicit financial consideration or fee figures identified.</p>
+                )}
               </div>
 
               {/* Termination & Governing Law */}
@@ -1086,21 +1098,25 @@ export default function AIAnalysisPage({ onNavigate }: { onNavigate: (page: stri
                   <div className="flex items-center gap-2 mb-3 text-amber-400 font-bold text-sm">
                     <Clock size={16} /> Termination Conditions & Notice
                   </div>
-                  <ul className="space-y-2 text-xs text-gray-300">
-                    {summaryOutput.terminationConditions.map((t, i) => (
-                      <li key={i} className="flex items-start gap-2">
-                        <span className="text-amber-400 font-bold">▪</span>
-                        <span>{t}</span>
-                      </li>
-                    ))}
-                  </ul>
+                  {summaryOutput.terminationConditions && summaryOutput.terminationConditions.length > 0 ? (
+                    <ul className="space-y-2 text-xs text-gray-300">
+                      {summaryOutput.terminationConditions.map((t, i) => (
+                        <li key={i} className="flex items-start gap-2">
+                          <span className="text-amber-400 font-bold">▪</span>
+                          <span>{t}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <p className="text-xs text-gray-400 italic">Not specified in the document</p>
+                  )}
                 </div>
 
                 <div className="bg-blue-950/10 border border-blue-500/20 p-5 rounded-xl">
                   <div className="flex items-center gap-2 mb-3 text-blue-400 font-bold text-sm">
                     <Gavel size={16} /> Governing Law & Jurisdiction
                   </div>
-                  <p className="text-xs text-gray-300 leading-relaxed">{summaryOutput.governingLaw}</p>
+                  <p className="text-xs text-gray-300 leading-relaxed">{summaryOutput.governingLaw || 'Not specified in the document'}</p>
                 </div>
               </div>
 

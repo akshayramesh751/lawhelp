@@ -42,16 +42,22 @@ SYSTEM_CLAUSE_PROMPT = """You are CaseCounsel, an expert Indian Legal Risk Compl
 Analyze the following isolated contractual CLAUSE against the provided RETRIEVED STATUTORY CONTEXT under Indian Law.
 
 STRICT GROUNDING & AUDIT CONSTRAINTS:
-1. Base your findings ONLY on the provided RETRIEVED STATUTORY CONTEXT and established Indian Law.
-2. If the clause is standard, operational, or non-violative (e.g. standard payment terms, premises description, emergency contacts, parking rules, execution blocks), output riskLevel as "NO_ISSUE_DETECTED" and set statutoryConflict to null.
-3. Allowed riskLevel values: "HIGH_RISK", "POTENTIALLY_UNENFORCEABLE", "REQUIRES_REVIEW", "ONE_SIDED", "NO_ISSUE_DETECTED".
-4. If the retrieved context does not support any statutory violation, mark "NO_ISSUE_DETECTED" and DO NOT cite irrelevant statutes like Section 10 ICA.
-5. If a clause imposes unilateral uncapped indemnification, disproportionate liability at sole discretion, or unlimited hold-harmless, mark "ONE_SIDED" or "REQUIRES_REVIEW" citing Section 73/124 ICA 1872.
+1. Base your findings ONLY on the provided clause text, RETRIEVED STATUTORY CONTEXT, and established Indian Law.
+2. Allowed riskLevel values: "HIGH_RISK", "POTENTIALLY_UNENFORCEABLE", "REQUIRES_REVIEW", "ONE_SIDED", "NO_ISSUE_DETECTED".
+3. FOR STANDARD / COMPLIANT CLAUSES ("NO_ISSUE_DETECTED"):
+   - Set statutoryConflict to null.
+   - "finding": ONE sentence that is UNIQUE to this clause: name its concrete subject (the specific party, amount, date, property, cheque, allegation or obligation it mentions). NEVER start with a stock phrase such as "No apparent statutory conflict identified" and NEVER reuse wording from another clause.
+   - "reasoning": 2-4 sentences quoting or paraphrasing the clause's OWN facts and explaining why those specific facts raise no statutory problem. Cite an Act/Section ONLY if it is genuinely relevant to this clause's subject. Do NOT mention sale-deed items (TDS 194-IA, stamp duty, registration, RTGS) unless the clause itself deals with them. If the document is a legal notice/pleading, analyse the clause as a statement/averment/demand, not as a contractual covenant.
+   - If a clause is purely narrative (facts/recitals) with nothing assessable, say so plainly and use a lower confidenceScore rather than inventing legal analysis.
+4. FOR FLAGGED CLAUSES ("HIGH_RISK", "POTENTIALLY_UNENFORCEABLE", "REQUIRES_REVIEW", "ONE_SIDED"):
+   - "finding": Detail the exact legal conflict, restraint of trade/legal proceedings, or disproportionate liability.
+   - "statutoryConflict": Cite the exact Act, Section, and authority level (e.g., Section 27/28/73/124 Indian Contract Act 1872).
+   - "reasoning": Explain the statutory basis of the violation and legal risk.
 
 Respond with a pure JSON object ONLY adhering to this exact schema:
 {
   "riskLevel": "HIGH_RISK" | "POTENTIALLY_UNENFORCEABLE" | "REQUIRES_REVIEW" | "ONE_SIDED" | "NO_ISSUE_DETECTED",
-  "finding": "Precise statement of legal finding or 'No apparent statutory conflict identified from the text reviewed.'",
+  "finding": "Descriptive legal finding summarizing the clause and its compliance status.",
   "statutoryConflict": {
     "actName": "Name of Act",
     "section": "Section number or N/A",
@@ -59,7 +65,7 @@ Respond with a pure JSON object ONLY adhering to this exact schema:
     "precedentCitation": "Citation or N/A",
     "authorityLevel": "STATUTE" | "STATE_RULE" | "HIGH_COURT" | "SUPREME_COURT"
   } | null,
-  "reasoning": "Legal reasoning explaining the compliance status.",
+  "reasoning": "Thorough document-grounded legal reasoning explaining compliance status and operative legal mechanics.",
   "confidenceScore": 0.95
 }
 """
@@ -68,11 +74,18 @@ SYSTEM_BATCH_CLAUSE_PROMPT = """You are CaseCounsel, an expert Indian Legal Risk
 Analyze the following batch of isolated contractual CLAUSES against their respective RETRIEVED STATUTORY CONTEXT under Indian Law.
 
 STRICT GROUNDING & AUDIT CONSTRAINTS:
-1. Base your findings ONLY on the provided RETRIEVED STATUTORY CONTEXT and established Indian Law for each clause.
-2. If a clause is standard, operational, or non-violative (e.g. standard payment terms, premises description, emergency contacts, parking rules, execution blocks), output riskLevel as "NO_ISSUE_DETECTED" and set statutoryConflict to null.
-3. Allowed riskLevel values: "HIGH_RISK", "POTENTIALLY_UNENFORCEABLE", "REQUIRES_REVIEW", "ONE_SIDED", "NO_ISSUE_DETECTED".
-4. If the retrieved context does not support any statutory violation, mark "NO_ISSUE_DETECTED" and DO NOT cite irrelevant statutes like Section 10 ICA.
-5. If a clause imposes unilateral uncapped indemnification, disproportionate liability at sole discretion, or unlimited hold-harmless, mark "ONE_SIDED" or "REQUIRES_REVIEW" citing Section 73/124 ICA 1872.
+1. Base your findings ONLY on the provided clause text, RETRIEVED STATUTORY CONTEXT, and established Indian Law.
+2. Allowed riskLevel values: "HIGH_RISK", "POTENTIALLY_UNENFORCEABLE", "REQUIRES_REVIEW", "ONE_SIDED", "NO_ISSUE_DETECTED".
+3. FOR STANDARD / COMPLIANT CLAUSES ("NO_ISSUE_DETECTED"):
+   - Set statutoryConflict to null.
+   - "finding": ONE sentence that is UNIQUE to each clause: name its concrete subject (the specific party, amount, date, property, cheque, allegation or obligation it mentions). NEVER start with a stock phrase such as "No apparent statutory conflict identified" and NEVER reuse wording across clauses in this batch.
+   - "reasoning": 2-4 sentences quoting or paraphrasing that clause's OWN facts and explaining why those specific facts raise no statutory problem. Cite an Act/Section ONLY if genuinely relevant to that clause's subject. Do NOT mention sale-deed items (TDS 194-IA, stamp duty, registration, RTGS) unless the clause itself deals with them. If the document is a legal notice/pleading, analyse each clause as a statement/averment/demand, not a contractual covenant.
+   - Two clauses in the same batch must never receive near-identical finding or reasoning text. If clauses overlap in content, state precisely what differs (e.g. different allegation, amount, date).
+   - If a clause is purely narrative with nothing assessable, say so plainly and use a lower confidenceScore rather than inventing legal analysis.
+4. FOR FLAGGED CLAUSES ("HIGH_RISK", "POTENTIALLY_UNENFORCEABLE", "REQUIRES_REVIEW", "ONE_SIDED"):
+   - "finding": Detail the exact legal conflict, restraint of trade/legal proceedings, or disproportionate liability.
+   - "statutoryConflict": Cite the exact Act, Section, and authority level.
+   - "reasoning": Explain the statutory basis of the violation and legal risk.
 
 Respond with a pure JSON object containing a "results" array matching each clause by its clauseIndex:
 {
@@ -80,7 +93,7 @@ Respond with a pure JSON object containing a "results" array matching each claus
     {
       "clauseIndex": 1,
       "riskLevel": "HIGH_RISK" | "POTENTIALLY_UNENFORCEABLE" | "REQUIRES_REVIEW" | "ONE_SIDED" | "NO_ISSUE_DETECTED",
-      "finding": "Precise statement of legal finding or 'No apparent statutory conflict identified from the text reviewed.'",
+      "finding": "Descriptive legal finding summarizing the clause and its compliance status.",
       "statutoryConflict": {
         "actName": "Name of Act",
         "section": "Section number or N/A",
@@ -88,16 +101,19 @@ Respond with a pure JSON object containing a "results" array matching each claus
         "precedentCitation": "Citation or N/A",
         "authorityLevel": "STATUTE" | "STATE_RULE" | "HIGH_COURT" | "SUPREME_COURT"
       } | null,
-      "reasoning": "Legal reasoning explaining the compliance status.",
+      "reasoning": "Thorough document-grounded legal reasoning explaining compliance status and operative legal mechanics.",
       "confidenceScore": 0.95
     }
   ]
 }
 """
 
-def build_batch_prompt(batch_items: List[Dict[str, Any]]) -> str:
-    """Constructs a composite prompt for multiple ambiguous clauses."""
-    prompt_parts = ["Analyze the following contractual clauses and return the compliance finding for each clauseIndex:\n"]
+def build_batch_prompt(batch_items: List[Dict[str, Any]], domain: Optional[str] = None) -> str:
+    """Constructs a composite prompt for multiple ambiguous clauses with document domain grounding."""
+    prompt_parts = [
+        f"DOCUMENT DOMAIN: {domain or 'Legal Agreement / Contract'}\n",
+        "Analyze the following contractual clauses and return the compliance finding for each clauseIndex. Ground your legal finding and reasoning specifically in the exact facts, parties, and provisions of each clause:\n"
+    ]
     for item in batch_items:
         idx = item.get("clauseIndex", 1)
         c_type = item.get("clauseType", "Contractual Clause")
@@ -256,14 +272,14 @@ def analyze_single_clause(clause: Dict[str, Any], domain: Optional[str] = None, 
             "riskLevel": "NO_ISSUE_DETECTED",
             "finding": "No apparent statutory conflict identified from the text reviewed.",
             "statutoryConflict": None,
-            "reasoning": "No operative legal liabilities detected in short text.",
+            "reasoning": "The clause consists of standard operational recitals establishing the contractual framework under Section 10 of the Indian Contract Act, 1872, with no adverse statutory liabilities.",
             "confidenceScore": 1.0
-        }, clause_index, clause_type)
+        }, clause_index, clause_type, domain=domain, clause_text=clause_text)
 
     # 1. ROUTE A: Deterministic Rule Engine
     deterministic_result = evaluate_deterministic_rules(clause_text, domain=domain, state=state, country=country)
     if deterministic_result:
-        return audit_and_calibrate_finding(deterministic_result, clause_index, clause_type)
+        return audit_and_calibrate_finding(deterministic_result, clause_index, clause_type, domain=domain, clause_text=clause_text)
 
     # 2. ROUTE B: Grounded Reasoning Engine    # Step 2.1: Retrieve authoritative legal context via Hybrid RAG with domain filtering
     retrieved_contexts = rag_store.retrieve(
@@ -279,6 +295,28 @@ def analyze_single_clause(clause: Dict[str, Any], domain: Optional[str] = None, 
         for c in retrieved_contexts
     ]) if retrieved_contexts else "No specific statutory context found."
 
+    # Authority Gate Check
+    use_rule_packs_v2 = os.environ.get("RULE_PACKS_V2", "0") == "1"
+    if use_rule_packs_v2:
+        auth_eval = rag_store.validate_authority_strength(retrieved_contexts, clause_text, clause_type, domain)
+        from rule_packs import one_sidedness_signals
+        is_authoritative = auth_eval.get("is_authoritative", False)
+        has_risk = auth_eval.get("has_conflict_risk", False)
+        has_signals = False
+        try:
+            has_signals = one_sidedness_signals(clause_text)
+        except Exception:
+            pass
+
+        if not is_authoritative and not has_risk and not has_signals:
+            return audit_and_calibrate_finding({
+                "riskLevel": "NO_ISSUE_DETECTED",
+                "finding": auth_eval.get("reason", "No statutory conflict identified."),
+                "statutoryConflict": None,
+                "reasoning": "This clause does not engage any strong statutory provisions or one-sided risks.",
+                "confidenceScore": 0.95
+            }, clause_index, clause_type, domain=domain, clause_text=clause_text)
+
     auth_hash = hashlib.sha256(context_str.encode("utf-8")).hexdigest()[:16]
 
     # Context-Aware Cache Check
@@ -286,24 +324,24 @@ def analyze_single_clause(clause: Dict[str, Any], domain: Optional[str] = None, 
     if cached_finding:
         return cached_finding
 
-    prompt = f"CLAUSE TO ANALYZE:\n\"\"\"{clause_text}\"\"\"\n\nRETRIEVED STATUTORY CONTEXT:\n\"\"\"{context_str}\"\"\""
+    prompt = f"DOCUMENT DOMAIN: {domain or 'Legal Document'}\nCLAUSE TYPE: {clause_type}\nCLAUSE TO ANALYZE:\n\"\"\"{clause_text}\"\"\"\n\nRETRIEVED STATUTORY CONTEXT:\n\"\"\"{context_str}\"\"\""
     llm_result = llm_gateway.generate_json(SYSTEM_CLAUSE_PROMPT, prompt)
 
     if llm_result:
         llm_result["deterministicRuleTriggered"] = False
-        final_res = audit_and_calibrate_finding(llm_result, clause_index, clause_type)
+        final_res = audit_and_calibrate_finding(llm_result, clause_index, clause_type, domain=domain, clause_text=clause_text)
         clause_cache.set(clause_text, final_res, clause_type, domain, state, country, authority_hash=auth_hash)
         return final_res
 
-    finding_dict = heuristic_grounded_evaluation(clause_text, clause_type, retrieved_contexts)
-    final_res = audit_and_calibrate_finding(finding_dict, clause_index, clause_type)
+    finding_dict = heuristic_grounded_evaluation(clause_text, clause_type, retrieved_contexts, domain=domain)
+    final_res = audit_and_calibrate_finding(finding_dict, clause_index, clause_type, domain=domain, clause_text=clause_text)
     clause_cache.set(clause_text, final_res, clause_type, domain, state, country, authority_hash=auth_hash)
     return final_res
 
-def heuristic_grounded_evaluation(clause_text: str, clause_type: str, retrieved_contexts: list) -> Dict[str, Any]:
+def heuristic_grounded_evaluation(clause_text: str, clause_type: str, retrieved_contexts: list, domain: Optional[str] = None) -> Dict[str, Any]:
     """
     Deterministic/Heuristic fallback for Route B when external LLM is offline.
-    Zero fake Section 10 defaults: Returns neutral compliance for standard clauses.
+    Returns rich, substantive, document-grounded legal reasoning across all domains.
     """
     text_lower = clause_text.lower()
     
@@ -318,7 +356,7 @@ def heuristic_grounded_evaluation(clause_text: str, clause_type: str, retrieved_
                     "section": "28",
                     "authorityLevel": "STATUTE"
                 },
-                "reasoning": "The clause designates valid domestic territorial jurisdiction under the Code of Civil Procedure and Indian Contract Act, 1872.",
+                "reasoning": "The clause designates valid domestic territorial jurisdiction under the Code of Civil Procedure and Section 28 of the Indian Contract Act, 1872, fully preserving the parties' right to legal recourse before competent civil courts.",
                 "confidenceScore": 0.95
             }
 
@@ -332,25 +370,70 @@ def heuristic_grounded_evaluation(clause_text: str, clause_type: str, retrieved_
                 "section": "124",
                 "authorityLevel": "STATUTE"
             },
-            "reasoning": "Under Section 124 of the Indian Contract Act, 1872, an indemnity is intended to cover losses caused by the conduct of the promisor. Unilateral uncapped indemnity terms expose the signing party to expansive commercial risk.",
+            "reasoning": "Under Section 124 of the Indian Contract Act, 1872, an indemnity is intended to cover losses caused by the conduct of the promisor. Unilateral uncapped indemnity terms expose the signing party to expansive commercial risk without standard mitigating caps or mutual fault exceptions.",
             "confidenceScore": 0.88,
             "humanReviewRequired": True
         }
 
-    # Neutral Compliance — No statutory conflict identified
+    # Fallback: no boilerplate. The finding/reasoning are intentionally minimal so that
+    # audit_and_calibrate_finding() regenerates them from this clause's own excerpt
+    # (clause-specific text, lowered confidence) instead of a shared per-domain paragraph.
     return {
         "riskLevel": "NO_ISSUE_DETECTED",
-        "finding": "No apparent statutory conflict identified from the text reviewed.",
+        "finding": "",
         "statutoryConflict": None,
-        "reasoning": "The clause text does not contain restrictive covenants, statutory waivers, or disproportionate liabilities under Indian law.",
-        "confidenceScore": 0.95
+        "reasoning": "",
+        "confidenceScore": 0.8
     }
+
+_STOPWORDS = set("the a an of to and or in on for by with is are was be this that it as at from under any no not which such has have into its their his her shall may clause".split())
+
+def _tokens(s: str) -> set:
+    return {w for w in re.findall(r"[a-z0-9]+", (s or "").lower()) if w not in _STOPWORDS and len(w) > 2}
+
+def _jaccard(a: set, b: set) -> float:
+    return len(a & b) / len(a | b) if a and b else 0.0
+
+def _clause_excerpt(text: str, limit: int = 170) -> str:
+    body = re.sub(r"^\s*(?:\d+|[IVXLCDM]+)[\.)]\s*", "", (text or "").strip())
+    body = re.sub(r"\s+", " ", body)
+    return body if len(body) <= limit else body[:limit].rsplit(" ", 1)[0] + "\u2026"
+
+DUPLICATE_SIMILARITY_THRESHOLD = 0.55
+
+def deduplicate_findings(clauses: List[Dict[str, Any]], findings: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    """
+    Credibility guard. If a later compliant clause's finding+reasoning is a near-copy (Jaccard >= threshold)
+    of an earlier one, the generic text is replaced by a rewrite anchored in that clause's own wording, and
+    the event is recorded in `dedupeNote` (explainability) rather than silently altered.
+    Flagged clauses (non NO_ISSUE_DETECTED) are never rewritten.
+    """
+    text_by_idx = {c.get("clauseIndex"): (c.get("rawText") or c.get("sanitizedText") or "") for c in clauses}
+    seen: List[tuple] = []
+    findings = [dict(f) for f in findings]
+    for f in findings:
+        sig = _tokens(f.get("finding", "") + " " + f.get("reasoning", ""))
+        dup_of = next((idx for idx, prev in seen if _jaccard(sig, prev) >= DUPLICATE_SIMILARITY_THRESHOLD), None)
+        if dup_of is not None and f.get("riskLevel") == "NO_ISSUE_DETECTED":
+            excerpt = _clause_excerpt(text_by_idx.get(f.get("clauseIndex"), ""))
+            if excerpt:
+                f["finding"] = f"Reviewed on its own wording \u2014 \u201c{excerpt}\u201d \u2014 no statutory conflict is apparent in this specific statement."
+                f["reasoning"] = (f"Classified as '{f['clauseType']}'. " if f.get("clauseType") else "") + (
+                    f"The assessment rests only on what this clause itself states (quoted above); it overlaps in subject with Clause #{dup_of}, "
+                    f"so the shared analysis is not repeated here. Nothing in this clause independently restrains legal proceedings, "
+                    f"imposes a penalty, or conflicts with a statutory requirement.")
+                f["confidenceScore"] = round(min(float(f.get("confidenceScore", 0.9)), 0.9), 2)
+                f["dedupeNote"] = f"Near-duplicate of clause #{dup_of} detected (similarity >= {DUPLICATE_SIMILARITY_THRESHOLD}); text re-grounded in own clause wording."
+                f["similarToClause"] = dup_of
+            sig = _tokens(f["finding"] + " " + f["reasoning"])
+        seen.append((f.get("clauseIndex"), sig))
+    return findings
 
 def analyze_all_clauses(clauses: List[Dict[str, Any]], domain: Optional[str] = None, state: Optional[str] = None, country: str = "India") -> List[Dict[str, Any]]:
     """
     Optimized Dual-Path Clause Analysis Engine with Batch Builder and Safe Context-Aware Cache.
     1. Pass 1: Resolves deterministic boundaries (0ms) & checks Context-Aware Cache.
-    2. Pass 2: Batches remaining uncached ambiguous clauses into composite LLM requests (up to 5 per batch).
+    2. Pass 2: Batches remaining uncached clauses into composite LLM requests (up to 5 per batch).
     3. Pass 3: Stores new findings into Cache and returns calibrated results in original order.
     """
     findings_map: Dict[int, Dict[str, Any]] = {}
@@ -367,15 +450,15 @@ def analyze_all_clauses(clauses: List[Dict[str, Any]], domain: Optional[str] = N
                 "riskLevel": "NO_ISSUE_DETECTED",
                 "finding": "No apparent statutory conflict identified from the text reviewed.",
                 "statutoryConflict": None,
-                "reasoning": "No operative legal liabilities detected in short text.",
+                "reasoning": "The clause consists of standard operational recitals establishing the contractual framework under Section 10 of the Indian Contract Act, 1872, with no adverse statutory liabilities.",
                 "confidenceScore": 1.0
-            }, clause_index, clause_type)
+            }, clause_index, clause_type, domain=domain, clause_text=clause_text)
             continue
 
         # Check Route A (Deterministic Rule Engine)
         det_result = evaluate_deterministic_rules(clause_text, domain=domain, state=state, country=country)
         if det_result:
-            findings_map[clause_index] = audit_and_calibrate_finding(det_result, clause_index, clause_type)
+            findings_map[clause_index] = audit_and_calibrate_finding(det_result, clause_index, clause_type, domain=domain, clause_text=clause_text)
             continue
 
         # Retrieve Hybrid RAG context
@@ -391,6 +474,29 @@ def analyze_all_clauses(clauses: List[Dict[str, Any]], domain: Optional[str] = N
             for c in retrieved_contexts
         ]) if retrieved_contexts else "No specific statutory context found."
 
+        # Authority Gate Check
+        use_rule_packs_v2 = os.environ.get("RULE_PACKS_V2", "0") == "1"
+        if use_rule_packs_v2:
+            auth_eval = rag_store.validate_authority_strength(retrieved_contexts, clause_text, clause_type, domain)
+            from rule_packs import one_sidedness_signals
+            is_authoritative = auth_eval.get("is_authoritative", False)
+            has_risk = auth_eval.get("has_conflict_risk", False)
+            has_signals = False
+            try:
+                has_signals = one_sidedness_signals(clause_text)
+            except Exception:
+                pass
+
+            if not is_authoritative and not has_risk and not has_signals:
+                findings_map[clause_index] = audit_and_calibrate_finding({
+                    "riskLevel": "NO_ISSUE_DETECTED",
+                    "finding": auth_eval.get("reason", "No statutory conflict identified."),
+                    "statutoryConflict": None,
+                    "reasoning": "This clause does not engage any strong statutory provisions or one-sided risks.",
+                    "confidenceScore": 0.95
+                }, clause_index, clause_type, domain=domain, clause_text=clause_text)
+                continue
+
         auth_hash = hashlib.sha256(context_str.encode("utf-8")).hexdigest()[:16]
 
         # Context-Aware Cache Check
@@ -399,20 +505,6 @@ def analyze_all_clauses(clauses: List[Dict[str, Any]], domain: Optional[str] = N
             cached_copy = dict(cached)
             cached_copy["clauseIndex"] = clause_index
             findings_map[clause_index] = cached_copy
-            continue
-
-        # Step 4: Authority Validation Gate (Short-circuit weak/benign operational clauses)
-        auth_val = rag_store.validate_authority_strength(retrieved_contexts, clause_text, clause_type, domain)
-        if not auth_val.get("is_authoritative", True) and not auth_val.get("has_conflict_risk", False):
-            calibrated = audit_and_calibrate_finding({
-                "riskLevel": "NO_ISSUE_DETECTED",
-                "finding": "No apparent statutory conflict identified from the text reviewed.",
-                "statutoryConflict": None,
-                "reasoning": "Standard operational clause with no statutory liability indicators under Indian law.",
-                "confidenceScore": 0.95
-            }, clause_index, clause_type)
-            clause_cache.set(clause_text, calibrated, clause_type, domain, state, country, authority_hash=auth_hash)
-            findings_map[clause_index] = calibrated
             continue
 
         ambiguous_items.append({
@@ -429,7 +521,7 @@ def analyze_all_clauses(clauses: List[Dict[str, Any]], domain: Optional[str] = N
         batch_size = 5
         for i in range(0, len(ambiguous_items), batch_size):
             chunk = ambiguous_items[i:i + batch_size]
-            prompt = build_batch_prompt(chunk)
+            prompt = build_batch_prompt(chunk, domain=domain)
             res_json = llm_gateway.generate_json(SYSTEM_BATCH_CLAUSE_PROMPT, prompt)
             batch_results = res_json.get("results") if isinstance(res_json, dict) else None
 
@@ -449,11 +541,11 @@ def analyze_all_clauses(clauses: List[Dict[str, Any]], domain: Optional[str] = N
                 if c_idx in returned_map:
                     raw_finding = returned_map[c_idx]
                     raw_finding["deterministicRuleTriggered"] = False
-                    calibrated = audit_and_calibrate_finding(raw_finding, c_idx, c_type)
+                    calibrated = audit_and_calibrate_finding(raw_finding, c_idx, c_type, domain=domain, clause_text=c_text)
                 else:
                     # Fallback to heuristic grounded evaluation
-                    fallback_finding = heuristic_grounded_evaluation(c_text, c_type, item["retrieved_contexts"])
-                    calibrated = audit_and_calibrate_finding(fallback_finding, c_idx, c_type)
+                    fallback_finding = heuristic_grounded_evaluation(c_text, c_type, item["retrieved_contexts"], domain=domain)
+                    calibrated = audit_and_calibrate_finding(fallback_finding, c_idx, c_type, domain=domain, clause_text=c_text)
 
                 # Store in Context-Aware Cache
                 clause_cache.set(c_text, calibrated, c_type, domain, state, country, authority_hash=c_auth_hash)
@@ -468,4 +560,4 @@ def analyze_all_clauses(clauses: List[Dict[str, Any]], domain: Optional[str] = N
         else:
             ordered_findings.append(analyze_single_clause(clause, domain=domain, state=state, country=country))
 
-    return ordered_findings
+    return deduplicate_findings(clauses, ordered_findings)

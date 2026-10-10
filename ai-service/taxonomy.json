@@ -4,37 +4,72 @@
         "Employment Contract",
         "Sale Deed",
         "Legal Notice",
-        "Non-Disclosure Agreement"
+        "Non-Disclosure Agreement",
+        "Court Pleading / Original Suit (OS)",
+        "Criminal / Bail, Surety & Undertaking"
     ],
     "headers": {
         "Rental Agreement": [
             "rental agreement",
             "lease agreement",
             "leave and license agreement",
-            "ಬಾಡಿಗೆ ಕರಾರು ಪತ್ರ",
-            "ಬಾಡಿಗೆ ಕರಾರು"
+            "agreement of lease",
+            "residential lease",
+            "\u0cac\u0cbe\u0ca1\u0cbf\u0c97\u0cc6 \u0c95\u0cb0\u0cbe\u0cb0\u0cc1 \u0caa\u0ca4\u0ccd\u0cb0",
+            "\u0cac\u0cbe\u0ca1\u0cbf\u0c97\u0cc6 \u0c95\u0cb0\u0cbe\u0cb0\u0cc1",
+            "\u0c97\u0cc1\u0ca4\u0ccd\u0ca4\u0cbf\u0c97\u0cc6 \u0c95\u0cb0\u0cbe\u0cb0\u0cc1"
         ],
         "Employment Contract": [
             "employment contract",
             "offer letter",
             "appointment letter",
             "employment agreement",
-            "ಉದ್ಯೋಗ ಒಪ್ಪಂದ"
+            "service agreement",
+            "\u0c89\u0ca6\u0ccd\u0caf\u0ccb\u0c97 \u0c92\u0caa\u0ccd\u0caa\u0c82\u0ca6"
         ],
         "Sale Deed": [
             "sale deed",
             "deed of absolute sale",
-            "ಮಾರಾಟ ಪತ್ರ"
+            "absolute sale deed",
+            "agreement to sell",
+            "agreement of sale",
+            "conveyance deed",
+            "\u0cae\u0cbe\u0cb0\u0cbe\u0c9f \u0caa\u0ca4\u0ccd\u0cb0",
+            "\u0c95\u0ccd\u0cb0\u0caf \u0caa\u0ca4\u0ccd\u0cb0"
         ],
         "Legal Notice": [
             "legal notice",
             "notice of demand",
-            "ವಕೀಲರ ನೋಟಿಸ್"
+            "advocate notice",
+            "statutory notice",
+            "\u0cb5\u0c95\u0cc0\u0cb2\u0cb0 \u0ca8\u0ccb\u0c9f\u0cbf\u0cb8\u0ccd"
         ],
         "Non-Disclosure Agreement": [
             "non-disclosure agreement",
             "confidentiality agreement",
-            "nda"
+            "mutual nda",
+            "nda agreement"
+        ],
+        "Court Pleading / Original Suit (OS)": [
+            "original suit",
+            "o.s. no",
+            "os no",
+            "in the court of",
+            "plaint under",
+            "written statement",
+            "memorandum of plaint",
+            "petition under",
+            "court of the civil judge",
+            "before the court",
+            "\u0cae\u0cc2\u0cb2 \u0ca6\u0cbe\u0cb5\u0cc6"
+        ],
+        "Criminal / Bail, Surety & Undertaking": [
+            "indemnity bond",
+            "surety bond",
+            "compromise deed",
+            "undertaking",
+            "bail bond",
+            "anticipatory bail"
         ]
     },
     "weighted_keywords": {
@@ -66,7 +101,12 @@
             "consideration amount": 8,
             "stamp duty": 5,
             "registration fee": 5,
-            "absolute owner": 7
+            "absolute owner": 7,
+            "encumbrance": 7,
+            "vacant possession": 7,
+            "undivided share": 6,
+            "tds": 5,
+            "absolute sale": 8
         },
         "Legal Notice": {
             "under instructions from my client": 10,
@@ -83,6 +123,29 @@
             "trade secrets": 7,
             "intellectual property": 5,
             "non-compete": 6
+        },
+        "Court Pleading / Original Suit (OS)": {
+            "plaintiff": 10,
+            "defendant": 10,
+            "prayer": 9,
+            "cause of action": 9,
+            "original suit": 10,
+            "schedule property": 5,
+            "interim injunction": 8,
+            "suit valuation": 8,
+            "court fee": 8,
+            "civil judge": 8,
+            "jurisdiction": 5
+        },
+        "Criminal / Bail, Surety & Undertaking": {
+            "surety": 10,
+            "bail": 10,
+            "indemnity bond": 10,
+            "undertaking": 8,
+            "personally liable": 8,
+            "indemnifier": 8,
+            "court of": 5,
+            "police station": 5
         }
     }
 }

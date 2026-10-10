@@ -1,0 +1,40 @@
+{
+  "run_name": "full_v2",
+  "timestamp": "2026-10-11T02:14:37.406626",
+  "splits": {
+    "dev": {
+      "total": 0,
+      "segmentation_correct": 0,
+      "risk_exact_match": 0,
+      "flagged": 0,
+      "true_positives": 0,
+      "false_positives": 0,
+      "false_negatives": 0,
+      "controls_flagged": 0,
+      "precision": 0,
+      "recall": 0,
+      "f1": 0
+    },
+    "heldout": {
+      "total": 0,
+      "segmentation_correct": 0,
+      "risk_exact_match": 0,
+      "flagged": 0,
+      "true_positives": 0,
+      "false_positives": 0,
+      "false_negatives": 0,
+      "controls_flagged": 0,
+      "precision": 0,
+      "recall": 0,
+      "f1": 0
+    }
+  },
+  "domain_results": {},
+  "avg_severity": {
+    "control": 0,
+    "mild": 0,
+    "moderate": 0,
+    "extreme": 0
+  },
+  "confusion_matrix": {}
+}

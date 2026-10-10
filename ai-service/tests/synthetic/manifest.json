@@ -1,0 +1,938 @@
+[
+    {
+        "id": "doc_001_employment_control_en",
+        "domain": "employment",
+        "language": "en",
+        "severity": "control",
+        "numbering_style": "{title}\n{body}",
+        "split": "dev",
+        "expected_clause_count": 5,
+        "clauses": [
+            {
+                "clauseIndex": 1,
+                "expectedRiskLevel": "NO_ISSUE_DETECTED"
+            },
+            {
+                "clauseIndex": 2,
+                "expectedRiskLevel": "NO_ISSUE_DETECTED"
+            },
+            {
+                "clauseIndex": 3,
+                "expectedRiskLevel": "NO_ISSUE_DETECTED"
+            },
+            {
+                "clauseIndex": 4,
+                "expectedRiskLevel": "NO_ISSUE_DETECTED"
+            },
+            {
+                "clauseIndex": 5,
+                "expectedRiskLevel": "NO_ISSUE_DETECTED"
+            }
+        ],
+        "needs_lawyer_review": true
+    },
+    {
+        "id": "doc_002_employment_mild_en",
+        "domain": "employment",
+        "language": "en",
+        "severity": "mild",
+        "numbering_style": "{title}\n{body}",
+        "split": "dev",
+        "expected_clause_count": 5,
+        "clauses": [
+            {
+                "clauseIndex": 1,
+                "expectedRiskLevel": "NO_ISSUE_DETECTED"
+            },
+            {
+                "clauseIndex": 2,
+                "expectedRiskLevel": "NO_ISSUE_DETECTED"
+            },
+            {
+                "clauseIndex": 3,
+                "expectedRiskLevel": "NO_ISSUE_DETECTED"
+            },
+            {
+                "clauseIndex": 4,
+                "expectedRiskLevel": "ONE_SIDED"
+            },
+            {
+                "clauseIndex": 5,
+                "expectedRiskLevel": "NO_ISSUE_DETECTED"
+            }
+        ],
+        "needs_lawyer_review": true
+    },
+    {
+        "id": "doc_003_employment_moderate_en",
+        "domain": "employment",
+        "language": "en",
+        "severity": "moderate",
+        "numbering_style": "1) {title}\n{body}",
+        "split": "dev",
+        "expected_clause_count": 5,
+        "clauses": [
+            {
+                "clauseIndex": 1,
+                "expectedRiskLevel": "NO_ISSUE_DETECTED"
+            },
+            {
+                "clauseIndex": 2,
+                "expectedRiskLevel": "NO_ISSUE_DETECTED"
+            },
+            {
+                "clauseIndex": 3,
+                "expectedRiskLevel": "NO_ISSUE_DETECTED"
+            },
+            {
+                "clauseIndex": 4,
+                "expectedRiskLevel": "ONE_SIDED"
+            },
+            {
+                "clauseIndex": 5,
+                "expectedRiskLevel": "NO_ISSUE_DETECTED"
+            }
+        ],
+        "needs_lawyer_review": true
+    },
+    {
+        "id": "doc_004_employment_extreme_en",
+        "domain": "employment",
+        "language": "en",
+        "severity": "extreme",
+        "numbering_style": "1. {title}\n{body}",
+        "split": "dev",
+        "expected_clause_count": 5,
+        "clauses": [
+            {
+                "clauseIndex": 1,
+                "expectedRiskLevel": "NO_ISSUE_DETECTED"
+            },
+            {
+                "clauseIndex": 2,
+                "expectedRiskLevel": "NO_ISSUE_DETECTED"
+            },
+            {
+                "clauseIndex": 3,
+                "expectedRiskLevel": "NO_ISSUE_DETECTED"
+            },
+            {
+                "clauseIndex": 4,
+                "expectedRiskLevel": "HIGH_RISK"
+            },
+            {
+                "clauseIndex": 5,
+                "expectedRiskLevel": "NO_ISSUE_DETECTED"
+            }
+        ],
+        "needs_lawyer_review": true
+    },
+    {
+        "id": "doc_005_rental_control_en",
+        "domain": "rental",
+        "language": "en",
+        "severity": "control",
+        "numbering_style": "Section {n}\n{title}: {body}",
+        "split": "dev",
+        "expected_clause_count": 6,
+        "clauses": [
+            {
+                "clauseIndex": 1,
+                "expectedRiskLevel": "NO_ISSUE_DETECTED"
+            },
+            {
+                "clauseIndex": 2,
+                "expectedRiskLevel": "NO_ISSUE_DETECTED"
+            },
+            {
+                "clauseIndex": 3,
+                "expectedRiskLevel": "NO_ISSUE_DETECTED"
+            },
+            {
+                "clauseIndex": 4,
+                "expectedRiskLevel": "NO_ISSUE_DETECTED"
+            },
+            {
+                "clauseIndex": 5,
+                "expectedRiskLevel": "NO_ISSUE_DETECTED"
+            },
+            {
+                "clauseIndex": 6,
+                "expectedRiskLevel": "NO_ISSUE_DETECTED"
+            }
+        ],
+        "needs_lawyer_review": true
+    },
+    {
+        "id": "doc_006_rental_mild_en",
+        "domain": "rental",
+        "language": "en",
+        "severity": "mild",
+        "numbering_style": "ARTICLE {n} - {title}\n{body}",
+        "split": "dev",
+        "expected_clause_count": 6,
+        "clauses": [
+            {
+                "clauseIndex": 1,
+                "expectedRiskLevel": "NO_ISSUE_DETECTED"
+            },
+            {
+                "clauseIndex": 2,
+                "expectedRiskLevel": "NO_ISSUE_DETECTED"
+            },
+            {
+                "clauseIndex": 3,
+                "expectedRiskLevel": "NO_ISSUE_DETECTED"
+            },
+            {
+                "clauseIndex": 4,
+                "expectedRiskLevel": "NO_ISSUE_DETECTED"
+            },
+            {
+                "clauseIndex": 5,
+                "expectedRiskLevel": "ONE_SIDED"
+            },
+            {
+                "clauseIndex": 6,
+                "expectedRiskLevel": "NO_ISSUE_DETECTED"
+            }
+        ],
+        "needs_lawyer_review": true
+    },
+    {
+        "id": "doc_007_rental_moderate_en",
+        "domain": "rental",
+        "language": "en",
+        "severity": "moderate",
+        "numbering_style": "1. {title}\n{body}",
+        "split": "dev",
+        "expected_clause_count": 6,
+        "clauses": [
+            {
+                "clauseIndex": 1,
+                "expectedRiskLevel": "NO_ISSUE_DETECTED"
+            },
+            {
+                "clauseIndex": 2,
+                "expectedRiskLevel": "NO_ISSUE_DETECTED"
+            },
+            {
+                "clauseIndex": 3,
+                "expectedRiskLevel": "HIGH_RISK"
+            },
+            {
+                "clauseIndex": 4,
+                "expectedRiskLevel": "NO_ISSUE_DETECTED"
+            },
+            {
+                "clauseIndex": 5,
+                "expectedRiskLevel": "NO_ISSUE_DETECTED"
+            },
+            {
+                "clauseIndex": 6,
+                "expectedRiskLevel": "NO_ISSUE_DETECTED"
+            }
+        ],
+        "needs_lawyer_review": true
+    },
+    {
+        "id": "doc_008_rental_extreme_en",
+        "domain": "rental",
+        "language": "en",
+        "severity": "extreme",
+        "numbering_style": "Section {n}\n{title}: {body}",
+        "split": "dev",
+        "expected_clause_count": 6,
+        "clauses": [
+            {
+                "clauseIndex": 1,
+                "expectedRiskLevel": "NO_ISSUE_DETECTED"
+            },
+            {
+                "clauseIndex": 2,
+                "expectedRiskLevel": "ONE_SIDED"
+            },
+            {
+                "clauseIndex": 3,
+                "expectedRiskLevel": "NO_ISSUE_DETECTED"
+            },
+            {
+                "clauseIndex": 4,
+                "expectedRiskLevel": "NO_ISSUE_DETECTED"
+            },
+            {
+                "clauseIndex": 5,
+                "expectedRiskLevel": "HIGH_RISK"
+            },
+            {
+                "clauseIndex": 6,
+                "expectedRiskLevel": "NO_ISSUE_DETECTED"
+            }
+        ],
+        "needs_lawyer_review": true
+    },
+    {
+        "id": "doc_009_nda_control_en",
+        "domain": "nda",
+        "language": "en",
+        "severity": "control",
+        "numbering_style": "Section {n}\n{title}: {body}",
+        "split": "dev",
+        "expected_clause_count": 5,
+        "clauses": [
+            {
+                "clauseIndex": 1,
+                "expectedRiskLevel": "NO_ISSUE_DETECTED"
+            },
+            {
+                "clauseIndex": 2,
+                "expectedRiskLevel": "NO_ISSUE_DETECTED"
+            },
+            {
+                "clauseIndex": 3,
+                "expectedRiskLevel": "NO_ISSUE_DETECTED"
+            },
+            {
+                "clauseIndex": 4,
+                "expectedRiskLevel": "NO_ISSUE_DETECTED"
+            },
+            {
+                "clauseIndex": 5,
+                "expectedRiskLevel": "NO_ISSUE_DETECTED"
+            }
+        ],
+        "needs_lawyer_review": true
+    },
+    {
+        "id": "doc_010_nda_mild_en",
+        "domain": "nda",
+        "language": "en",
+        "severity": "mild",
+        "numbering_style": "{title}\n{body}",
+        "split": "heldout",
+        "expected_clause_count": 5,
+        "clauses": [
+            {
+                "clauseIndex": 1,
+                "expectedRiskLevel": "NO_ISSUE_DETECTED"
+            },
+            {
+                "clauseIndex": 2,
+                "expectedRiskLevel": "ONE_SIDED"
+            },
+            {
+                "clauseIndex": 3,
+                "expectedRiskLevel": "NO_ISSUE_DETECTED"
+            },
+            {
+                "clauseIndex": 4,
+                "expectedRiskLevel": "NO_ISSUE_DETECTED"
+            },
+            {
+                "clauseIndex": 5,
+                "expectedRiskLevel": "NO_ISSUE_DETECTED"
+            }
+        ],
+        "needs_lawyer_review": true
+    },
+    {
+        "id": "doc_011_nda_moderate_en",
+        "domain": "nda",
+        "language": "en",
+        "severity": "moderate",
+        "numbering_style": "ARTICLE {n} - {title}\n{body}",
+        "split": "dev",
+        "expected_clause_count": 5,
+        "clauses": [
+            {
+                "clauseIndex": 1,
+                "expectedRiskLevel": "NO_ISSUE_DETECTED"
+            },
+            {
+                "clauseIndex": 2,
+                "expectedRiskLevel": "NO_ISSUE_DETECTED"
+            },
+            {
+                "clauseIndex": 3,
+                "expectedRiskLevel": "REQUIRES_REVIEW"
+            },
+            {
+                "clauseIndex": 4,
+                "expectedRiskLevel": "NO_ISSUE_DETECTED"
+            },
+            {
+                "clauseIndex": 5,
+                "expectedRiskLevel": "NO_ISSUE_DETECTED"
+            }
+        ],
+        "needs_lawyer_review": true
+    },
+    {
+        "id": "doc_012_nda_extreme_en",
+        "domain": "nda",
+        "language": "en",
+        "severity": "extreme",
+        "numbering_style": "Section {n}\n{title}: {body}",
+        "split": "dev",
+        "expected_clause_count": 5,
+        "clauses": [
+            {
+                "clauseIndex": 1,
+                "expectedRiskLevel": "NO_ISSUE_DETECTED"
+            },
+            {
+                "clauseIndex": 2,
+                "expectedRiskLevel": "ONE_SIDED"
+            },
+            {
+                "clauseIndex": 3,
+                "expectedRiskLevel": "NO_ISSUE_DETECTED"
+            },
+            {
+                "clauseIndex": 4,
+                "expectedRiskLevel": "NO_ISSUE_DETECTED"
+            },
+            {
+                "clauseIndex": 5,
+                "expectedRiskLevel": "NO_ISSUE_DETECTED"
+            }
+        ],
+        "needs_lawyer_review": true
+    },
+    {
+        "id": "doc_013_vendor_msa_control_en",
+        "domain": "vendor_msa",
+        "language": "en",
+        "severity": "control",
+        "numbering_style": "1. {title}\n{body}",
+        "split": "heldout",
+        "expected_clause_count": 5,
+        "clauses": [
+            {
+                "clauseIndex": 1,
+                "expectedRiskLevel": "NO_ISSUE_DETECTED"
+            },
+            {
+                "clauseIndex": 2,
+                "expectedRiskLevel": "NO_ISSUE_DETECTED"
+            },
+            {
+                "clauseIndex": 3,
+                "expectedRiskLevel": "NO_ISSUE_DETECTED"
+            },
+            {
+                "clauseIndex": 4,
+                "expectedRiskLevel": "NO_ISSUE_DETECTED"
+            },
+            {
+                "clauseIndex": 5,
+                "expectedRiskLevel": "NO_ISSUE_DETECTED"
+            }
+        ],
+        "needs_lawyer_review": true
+    },
+    {
+        "id": "doc_014_vendor_msa_mild_en",
+        "domain": "vendor_msa",
+        "language": "en",
+        "severity": "mild",
+        "numbering_style": "1) {title}\n{body}",
+        "split": "dev",
+        "expected_clause_count": 5,
+        "clauses": [
+            {
+                "clauseIndex": 1,
+                "expectedRiskLevel": "NO_ISSUE_DETECTED"
+            },
+            {
+                "clauseIndex": 2,
+                "expectedRiskLevel": "ONE_SIDED"
+            },
+            {
+                "clauseIndex": 3,
+                "expectedRiskLevel": "NO_ISSUE_DETECTED"
+            },
+            {
+                "clauseIndex": 4,
+                "expectedRiskLevel": "NO_ISSUE_DETECTED"
+            },
+            {
+                "clauseIndex": 5,
+                "expectedRiskLevel": "NO_ISSUE_DETECTED"
+            }
+        ],
+        "needs_lawyer_review": true
+    },
+    {
+        "id": "doc_015_vendor_msa_moderate_en",
+        "domain": "vendor_msa",
+        "language": "en",
+        "severity": "moderate",
+        "numbering_style": "Clause {n}. {title}\n{body}",
+        "split": "dev",
+        "expected_clause_count": 5,
+        "clauses": [
+            {
+                "clauseIndex": 1,
+                "expectedRiskLevel": "NO_ISSUE_DETECTED"
+            },
+            {
+                "clauseIndex": 2,
+                "expectedRiskLevel": "NO_ISSUE_DETECTED"
+            },
+            {
+                "clauseIndex": 3,
+                "expectedRiskLevel": "HIGH_RISK"
+            },
+            {
+                "clauseIndex": 4,
+                "expectedRiskLevel": "NO_ISSUE_DETECTED"
+            },
+            {
+                "clauseIndex": 5,
+                "expectedRiskLevel": "NO_ISSUE_DETECTED"
+            }
+        ],
+        "needs_lawyer_review": true
+    },
+    {
+        "id": "doc_016_vendor_msa_extreme_en",
+        "domain": "vendor_msa",
+        "language": "en",
+        "severity": "extreme",
+        "numbering_style": "1) {title}\n{body}",
+        "split": "heldout",
+        "expected_clause_count": 5,
+        "clauses": [
+            {
+                "clauseIndex": 1,
+                "expectedRiskLevel": "NO_ISSUE_DETECTED"
+            },
+            {
+                "clauseIndex": 2,
+                "expectedRiskLevel": "NO_ISSUE_DETECTED"
+            },
+            {
+                "clauseIndex": 3,
+                "expectedRiskLevel": "HIGH_RISK"
+            },
+            {
+                "clauseIndex": 4,
+                "expectedRiskLevel": "ONE_SIDED"
+            },
+            {
+                "clauseIndex": 5,
+                "expectedRiskLevel": "NO_ISSUE_DETECTED"
+            }
+        ],
+        "needs_lawyer_review": true
+    },
+    {
+        "id": "doc_017_criminal_bond_control_en",
+        "domain": "criminal_bond",
+        "language": "en",
+        "severity": "control",
+        "numbering_style": "Clause {n}. {title}\n{body}",
+        "split": "dev",
+        "expected_clause_count": 5,
+        "clauses": [
+            {
+                "clauseIndex": 1,
+                "expectedRiskLevel": "NO_ISSUE_DETECTED"
+            },
+            {
+                "clauseIndex": 2,
+                "expectedRiskLevel": "NO_ISSUE_DETECTED"
+            },
+            {
+                "clauseIndex": 3,
+                "expectedRiskLevel": "NO_ISSUE_DETECTED"
+            },
+            {
+                "clauseIndex": 4,
+                "expectedRiskLevel": "NO_ISSUE_DETECTED"
+            },
+            {
+                "clauseIndex": 5,
+                "expectedRiskLevel": "NO_ISSUE_DETECTED"
+            }
+        ],
+        "needs_lawyer_review": true
+    },
+    {
+        "id": "doc_018_criminal_bond_mild_en",
+        "domain": "criminal_bond",
+        "language": "en",
+        "severity": "mild",
+        "numbering_style": "ARTICLE {n} - {title}\n{body}",
+        "split": "dev",
+        "expected_clause_count": 5,
+        "clauses": [
+            {
+                "clauseIndex": 1,
+                "expectedRiskLevel": "NO_ISSUE_DETECTED"
+            },
+            {
+                "clauseIndex": 2,
+                "expectedRiskLevel": "REQUIRES_REVIEW"
+            },
+            {
+                "clauseIndex": 3,
+                "expectedRiskLevel": "NO_ISSUE_DETECTED"
+            },
+            {
+                "clauseIndex": 4,
+                "expectedRiskLevel": "NO_ISSUE_DETECTED"
+            },
+            {
+                "clauseIndex": 5,
+                "expectedRiskLevel": "NO_ISSUE_DETECTED"
+            }
+        ],
+        "needs_lawyer_review": true
+    },
+    {
+        "id": "doc_019_criminal_bond_moderate_en",
+        "domain": "criminal_bond",
+        "language": "en",
+        "severity": "moderate",
+        "numbering_style": "Clause {n}. {title}\n{body}",
+        "split": "dev",
+        "expected_clause_count": 5,
+        "clauses": [
+            {
+                "clauseIndex": 1,
+                "expectedRiskLevel": "NO_ISSUE_DETECTED"
+            },
+            {
+                "clauseIndex": 2,
+                "expectedRiskLevel": "NO_ISSUE_DETECTED"
+            },
+            {
+                "clauseIndex": 3,
+                "expectedRiskLevel": "NO_ISSUE_DETECTED"
+            },
+            {
+                "clauseIndex": 4,
+                "expectedRiskLevel": "POTENTIALLY_UNENFORCEABLE"
+            },
+            {
+                "clauseIndex": 5,
+                "expectedRiskLevel": "NO_ISSUE_DETECTED"
+            }
+        ],
+        "needs_lawyer_review": true
+    },
+    {
+        "id": "doc_020_criminal_bond_extreme_en",
+        "domain": "criminal_bond",
+        "language": "en",
+        "severity": "extreme",
+        "numbering_style": "1. {title}\n{body}",
+        "split": "heldout",
+        "expected_clause_count": 5,
+        "clauses": [
+            {
+                "clauseIndex": 1,
+                "expectedRiskLevel": "NO_ISSUE_DETECTED"
+            },
+            {
+                "clauseIndex": 2,
+                "expectedRiskLevel": "NO_ISSUE_DETECTED"
+            },
+            {
+                "clauseIndex": 3,
+                "expectedRiskLevel": "POTENTIALLY_UNENFORCEABLE"
+            },
+            {
+                "clauseIndex": 4,
+                "expectedRiskLevel": "NO_ISSUE_DETECTED"
+            },
+            {
+                "clauseIndex": 5,
+                "expectedRiskLevel": "NO_ISSUE_DETECTED"
+            }
+        ],
+        "needs_lawyer_review": true
+    },
+    {
+        "id": "doc_021_rental_control_kan",
+        "domain": "rental",
+        "language": "kan",
+        "severity": "control",
+        "numbering_style": "Section {n}\n{title}: {body}",
+        "split": "dev",
+        "expected_clause_count": 6,
+        "clauses": [
+            {
+                "clauseIndex": 1,
+                "expectedRiskLevel": "NO_ISSUE_DETECTED"
+            },
+            {
+                "clauseIndex": 2,
+                "expectedRiskLevel": "NO_ISSUE_DETECTED"
+            },
+            {
+                "clauseIndex": 3,
+                "expectedRiskLevel": "NO_ISSUE_DETECTED"
+            },
+            {
+                "clauseIndex": 4,
+                "expectedRiskLevel": "NO_ISSUE_DETECTED"
+            },
+            {
+                "clauseIndex": 5,
+                "expectedRiskLevel": "NO_ISSUE_DETECTED"
+            },
+            {
+                "clauseIndex": 6,
+                "expectedRiskLevel": "NO_ISSUE_DETECTED"
+            }
+        ],
+        "needs_lawyer_review": true,
+        "needs_native_review": true
+    },
+    {
+        "id": "doc_022_rental_mild_kan",
+        "domain": "rental",
+        "language": "kan",
+        "severity": "mild",
+        "numbering_style": "ARTICLE {n} - {title}\n{body}",
+        "split": "dev",
+        "expected_clause_count": 6,
+        "clauses": [
+            {
+                "clauseIndex": 1,
+                "expectedRiskLevel": "NO_ISSUE_DETECTED"
+            },
+            {
+                "clauseIndex": 2,
+                "expectedRiskLevel": "NO_ISSUE_DETECTED"
+            },
+            {
+                "clauseIndex": 3,
+                "expectedRiskLevel": "NO_ISSUE_DETECTED"
+            },
+            {
+                "clauseIndex": 4,
+                "expectedRiskLevel": "NO_ISSUE_DETECTED"
+            },
+            {
+                "clauseIndex": 5,
+                "expectedRiskLevel": "ONE_SIDED"
+            },
+            {
+                "clauseIndex": 6,
+                "expectedRiskLevel": "NO_ISSUE_DETECTED"
+            }
+        ],
+        "needs_lawyer_review": true,
+        "needs_native_review": true
+    },
+    {
+        "id": "doc_023_rental_moderate_kan",
+        "domain": "rental",
+        "language": "kan",
+        "severity": "moderate",
+        "numbering_style": "Clause {n}. {title}\n{body}",
+        "split": "heldout",
+        "expected_clause_count": 6,
+        "clauses": [
+            {
+                "clauseIndex": 1,
+                "expectedRiskLevel": "NO_ISSUE_DETECTED"
+            },
+            {
+                "clauseIndex": 2,
+                "expectedRiskLevel": "NO_ISSUE_DETECTED"
+            },
+            {
+                "clauseIndex": 3,
+                "expectedRiskLevel": "HIGH_RISK"
+            },
+            {
+                "clauseIndex": 4,
+                "expectedRiskLevel": "NO_ISSUE_DETECTED"
+            },
+            {
+                "clauseIndex": 5,
+                "expectedRiskLevel": "NO_ISSUE_DETECTED"
+            },
+            {
+                "clauseIndex": 6,
+                "expectedRiskLevel": "NO_ISSUE_DETECTED"
+            }
+        ],
+        "needs_lawyer_review": true,
+        "needs_native_review": true
+    },
+    {
+        "id": "doc_024_rental_extreme_kan",
+        "domain": "rental",
+        "language": "kan",
+        "severity": "extreme",
+        "numbering_style": "Section {n}\n{title}: {body}",
+        "split": "heldout",
+        "expected_clause_count": 6,
+        "clauses": [
+            {
+                "clauseIndex": 1,
+                "expectedRiskLevel": "NO_ISSUE_DETECTED"
+            },
+            {
+                "clauseIndex": 2,
+                "expectedRiskLevel": "NO_ISSUE_DETECTED"
+            },
+            {
+                "clauseIndex": 3,
+                "expectedRiskLevel": "NO_ISSUE_DETECTED"
+            },
+            {
+                "clauseIndex": 4,
+                "expectedRiskLevel": "NO_ISSUE_DETECTED"
+            },
+            {
+                "clauseIndex": 5,
+                "expectedRiskLevel": "HIGH_RISK"
+            },
+            {
+                "clauseIndex": 6,
+                "expectedRiskLevel": "NO_ISSUE_DETECTED"
+            }
+        ],
+        "needs_lawyer_review": true,
+        "needs_native_review": true
+    },
+    {
+        "id": "doc_025_employment_control_kan",
+        "domain": "employment",
+        "language": "kan",
+        "severity": "control",
+        "numbering_style": "Clause {n}. {title}\n{body}",
+        "split": "dev",
+        "expected_clause_count": 5,
+        "clauses": [
+            {
+                "clauseIndex": 1,
+                "expectedRiskLevel": "NO_ISSUE_DETECTED"
+            },
+            {
+                "clauseIndex": 2,
+                "expectedRiskLevel": "NO_ISSUE_DETECTED"
+            },
+            {
+                "clauseIndex": 3,
+                "expectedRiskLevel": "NO_ISSUE_DETECTED"
+            },
+            {
+                "clauseIndex": 4,
+                "expectedRiskLevel": "NO_ISSUE_DETECTED"
+            },
+            {
+                "clauseIndex": 5,
+                "expectedRiskLevel": "NO_ISSUE_DETECTED"
+            }
+        ],
+        "needs_lawyer_review": true,
+        "needs_native_review": true
+    },
+    {
+        "id": "doc_026_employment_mild_kan",
+        "domain": "employment",
+        "language": "kan",
+        "severity": "mild",
+        "numbering_style": "{title}\n{body}",
+        "split": "dev",
+        "expected_clause_count": 5,
+        "clauses": [
+            {
+                "clauseIndex": 1,
+                "expectedRiskLevel": "NO_ISSUE_DETECTED"
+            },
+            {
+                "clauseIndex": 2,
+                "expectedRiskLevel": "NO_ISSUE_DETECTED"
+            },
+            {
+                "clauseIndex": 3,
+                "expectedRiskLevel": "NO_ISSUE_DETECTED"
+            },
+            {
+                "clauseIndex": 4,
+                "expectedRiskLevel": "ONE_SIDED"
+            },
+            {
+                "clauseIndex": 5,
+                "expectedRiskLevel": "NO_ISSUE_DETECTED"
+            }
+        ],
+        "needs_lawyer_review": true,
+        "needs_native_review": true
+    },
+    {
+        "id": "doc_027_employment_moderate_kan",
+        "domain": "employment",
+        "language": "kan",
+        "severity": "moderate",
+        "numbering_style": "{title}\n{body}",
+        "split": "dev",
+        "expected_clause_count": 5,
+        "clauses": [
+            {
+                "clauseIndex": 1,
+                "expectedRiskLevel": "NO_ISSUE_DETECTED"
+            },
+            {
+                "clauseIndex": 2,
+                "expectedRiskLevel": "NO_ISSUE_DETECTED"
+            },
+            {
+                "clauseIndex": 3,
+                "expectedRiskLevel": "NO_ISSUE_DETECTED"
+            },
+            {
+                "clauseIndex": 4,
+                "expectedRiskLevel": "ONE_SIDED"
+            },
+            {
+                "clauseIndex": 5,
+                "expectedRiskLevel": "NO_ISSUE_DETECTED"
+            }
+        ],
+        "needs_lawyer_review": true,
+        "needs_native_review": true
+    },
+    {
+        "id": "doc_028_employment_extreme_kan",
+        "domain": "employment",
+        "language": "kan",
+        "severity": "extreme",
+        "numbering_style": "Clause {n}. {title}\n{body}",
+        "split": "heldout",
+        "expected_clause_count": 5,
+        "clauses": [
+            {
+                "clauseIndex": 1,
+                "expectedRiskLevel": "NO_ISSUE_DETECTED"
+            },
+            {
+                "clauseIndex": 2,
+                "expectedRiskLevel": "NO_ISSUE_DETECTED"
+            },
+            {
+                "clauseIndex": 3,
+                "expectedRiskLevel": "NO_ISSUE_DETECTED"
+            },
+            {
+                "clauseIndex": 4,
+                "expectedRiskLevel": "HIGH_RISK"
+            },
+            {
+                "clauseIndex": 5,
+                "expectedRiskLevel": "NO_ISSUE_DETECTED"
+            }
+        ],
+        "needs_lawyer_review": true,
+        "needs_native_review": true
+    }
+]

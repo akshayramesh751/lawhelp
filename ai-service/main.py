@@ -1,4 +1,6 @@
-from fastapi import FastAPI, HTTPException, File, UploadFile
+import os
+import base64
+from fastapi import FastAPI, HTTPException, File, UploadFile, Form
 from pydantic import BaseModel
 import re
 import unicodedata
@@ -15,6 +17,7 @@ from legal_chunker import chunk_legal_text
 from clause_analyzer import analyze_all_clauses
 from summarizer import summarize_document
 from chat_service import answer_document_query
+from kannada_normalizer import apply_glossary, kannada_quality_report, split_for_translation, translate_with_retry, fix_joint_characters
 
 app = FastAPI(title="NyayaConnect AI Engine")
 
@@ -67,32 +70,165 @@ class DocumentResponse(BaseModel):
     classification: dict
     risk_analysis: list[dict] = []
     summary_output: dict = {}
+    translation_quality: dict = {}
 
 @app.post("/process-document", response_model=DocumentResponse)
 async def process_document(request: DocumentRequest):
     return process_text_pipeline(request.text, request.source_language)
 
 @app.post("/process-pdf", response_model=DocumentResponse)
-async def process_pdf(file: UploadFile = File(...), source_language: str = "auto"):
+async def process_pdf(file: UploadFile = File(...), source_language: str = Form("auto")):
     # Read the file bytes
     file_bytes = await file.read()
+    if not file_bytes or len(file_bytes) < 10:
+        raise HTTPException(status_code=400, detail="Uploaded file is empty or unreadable.")
     
     # Extract text using PyMuPDF (Native-First)
     try:
         doc = fitz.open(stream=file_bytes, filetype="pdf")
-        text = ""
-        for page in doc:
-            text += page.get_text()
+    except Exception as open_err:
+        raise HTTPException(status_code=400, detail=f"Cannot parse PDF format: {open_err}")
+
+    try:
+        MAX_OCR_PAGES = 20
+        page_texts = []
+        ocr_candidates = []  # (page_index) pages whose content is mostly image
+        for idx, page in enumerate(doc):
+            pt = page.get_text() or ""
+            page_texts.append(pt)
+            try:
+                has_images = len(page.get_images(full=True)) > 0
+            except Exception:
+                has_images = False
+            # Image-based page: almost no selectable text. If it carries images, or the whole doc is textless, OCR it.
+            if len(pt.strip()) < 150 and (has_images or len(pt.strip()) < 50):
+                ocr_candidates.append(idx)
+
+        text = "".join(page_texts)
+        total_chars = len(text.strip())
+
+        # Whole document is blank-ish with nothing to render -> genuinely unreadable
+        if len(doc) == 0:
+            raise HTTPException(status_code=400, detail="PDF contains no pages.")
+
+        # Only OCR when the doc is effectively textless, OR image pages hold a meaningful share of it
+        needs_ocr = total_chars < 50 or (ocr_candidates and len(ocr_candidates) >= 1 and has_substantial_images(doc, ocr_candidates))
         
-        # Calculate density: if text is too short compared to pages, it's likely a scanned image PDF
-        if len(text.strip()) < 50:
-            raise HTTPException(status_code=422, detail="SCANNED_PDF_DETECTED")
-            
+        use_v2 = os.environ.get("KN_NORMALIZER_V2", "1") == "1"
+        if use_v2:
+            if kannada_quality_report(text).get("looks_garbled"):
+                needs_ocr = True
+                ocr_candidates = list(range(min(len(doc), MAX_OCR_PAGES)))
+                
+        if needs_ocr and ocr_candidates:
+            page_images, page_indices = [], []
+            for idx in ocr_candidates[:MAX_OCR_PAGES]:
+                pix = doc[idx].get_pixmap(dpi=200)  # 200 dpi: better OCR on small legal print
+                page_images.append(base64.b64encode(pix.tobytes("png")).decode("utf-8"))
+                page_indices.append(idx)
+            raise HTTPException(
+                status_code=422,
+                detail={
+                    "code": "SCANNED_PDF_DETECTED",
+                    "message": "Image-based pages detected. Page images provided for OCR fallback.",
+                    "page_images": page_images,
+                    "page_indices": page_indices,
+                    # Native text of every page so the caller can MERGE OCR output instead of discarding it
+                    "native_pages": page_texts,
+                    "truncated": len(ocr_candidates) > MAX_OCR_PAGES
+                }
+            )
+
         return process_text_pipeline(text, source_language)
     except Exception as e:
         if isinstance(e, HTTPException):
             raise e
-        raise HTTPException(status_code=500, detail=str(e))
+        import traceback; traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"{type(e).__name__}: {e}")
+
+def has_substantial_images(doc, page_indices) -> bool:
+    """True if an image-bearing, text-poor page covers a meaningful area (avoids OCR for tiny logos/stamps)."""
+    for idx in page_indices:
+        page = doc[idx]
+        page_area = max(page.rect.width * page.rect.height, 1)
+        try:
+            for img in page.get_images(full=True):
+                for r in page.get_image_rects(img[0]):
+                    if (r.width * r.height) / page_area >= 0.15:
+                        return True
+        except Exception:
+            return True  # can't measure -> be safe and OCR
+    return False
+
+def _has_kw(haystack: str, keywords) -> bool:
+    """Whole-word / phrase match. Avoids false hits like 'rent' in 'current' or 'car' in 'care'."""
+    return any(re.search(r'\b' + re.escape(k) + r'\b', haystack) for k in keywords)
+
+def _looks_like_legal_notice(text: str) -> bool:
+    t = text.lower()
+    markers = ["legal notice", "under instructions from my client", "under instruction from my client",
+               "my client", "our client", "call upon you", "advocate"]
+    return sum(1 for m in markers if m in t) >= 2
+
+# (type label, header keywords, body keywords). Header hits outrank body hits.
+_CLAUSE_TAXONOMY = [
+    ("Encumbrance & Title Warranty", ["encumbrance", "encumbrances", "lien", "title warranty", "clear title", "marketable title", "indemnity"], ["free from all encumbrances", "encumbrance", "court attachment", "lien", "mortgage", "charge or lien"]),
+    ("Property Conveyance / Transfer", ["conveyance", "absolute sale", "transfer", "sale deed", "assignment"], ["absolutely sell", "convey", "conveyance", "hereby transfer"]),
+    ("Financial & Consideration Schedules", ["consideration", "payment", "price", "rent", "deposit", "salary", "stamp duty", "tds"], ["sale consideration", "stamp duty", "registration fee", "tds", "security deposit", "monthly rent", "salary"]),
+    ("Possession & Title Deeds", ["possession", "title deeds", "khata"], ["vacant possession", "peaceful possession", "title deeds", "khata"]),
+    ("Court Pleadings / Relief Sought", ["prayer", "relief", "injunction"], ["permanent injunction", "declaration of title", "decree"]),
+    ("Cause of Action & Valuation", ["cause of action", "court fee", "valuation"], ["cause of action", "court fee", "suit valuation"]),
+    ("Execution & Attestation", ["witness", "witnesses", "signature", "execution", "attestation"], ["in witness whereof", "signed and delivered", "attested"]),
+    ("Termination & Notice", ["termination", "cancellation", "notice period"], ["terminate this agreement", "notice period", "months notice"]),
+    ("Term & Tenure", ["term", "tenure", "duration", "period"], ["lease term", "tenure of", "period of"]),
+    ("Confidentiality & Non-Disclosure", ["confidentiality", "non-disclosure", "secrecy"], ["confidential information", "non-disclosure"]),
+    ("Governing Law & Disputes", ["governing law", "jurisdiction", "dispute", "disputes", "arbitration"], ["governing law", "exclusive jurisdiction", "arbitration"]),
+    ("Premises Use / Parking Permission", ["parking", "vehicle", "vehicles"], ["parking", "two-wheeler", "four-wheeler"]),
+    ("Premises / Schedule Property", ["premises", "schedule", "demised premises", "property description"], ["schedule property", "demised premises", "bounded by"]),
+    ("Parties & Recitals", ["parties", "recitals", "whereas"], ["between"]),
+]
+
+# Legal-notice paragraphs are classified by rhetorical FUNCTION, not by transactional vocabulary,
+# otherwise every 'denied' paragraph mentioning a cheque/property collapses into one bucket.
+_NOTICE_FUNCTIONS = [
+    ("Notice \u2013 Demand / Call to Perform", ["call upon you", "hereby demand", "demand that", "you are required to", "you are hereby called upon", "execute the sale deed", "pay the balance"]),
+    ("Notice \u2013 Consequences & Reservation of Rights", ["failing which", "reserve the right", "reserves the right", "legal action", "civil and criminal", "at your risk and cost", "proceedings"]),
+    ("Notice \u2013 Denial of Allegations", ["deny", "denied", "denies", "false", "baseless", "strict proof", "frivolous"]),
+    ("Notice \u2013 Agreement / Payment Particulars", ["agreement of sale", "advance", "balance", "sale consideration", "cheque", "cheques", "rs.", "rupees"]),
+    ("Notice \u2013 Factual Background", ["my client", "our client", "you are aware", "owner of", "purchase", "sister", "brother", "residing"]),
+]
+
+def classify_clause_type(header: str, body: str, is_notice: bool = False) -> str:
+    h = (header or "").lower()
+    b = (body or "").lower()
+    
+    is_generic_header = not h or any(gh in h for gh in ["clause", "section", "article", "general", "miscellaneous", "other", "terms", "conditions"])
+    
+    # 1) If header is not generic, it is the strongest signal of intent
+    if not is_generic_header:
+        for label, h_kw, _ in _CLAUSE_TAXONOMY:
+            if _has_kw(h, h_kw):
+                return label
+                
+    # 2) Legal notices: classify by rhetorical function
+    if is_notice:
+        for label, kws in _NOTICE_FUNCTIONS:
+            if any(k in b for k in kws):
+                return label
+        return "Notice \u2013 General Averment"
+        
+    # 3) Contracts: body text signals
+    for label, _, b_kw in _CLAUSE_TAXONOMY:
+        if _has_kw(b, b_kw):
+            return label
+            
+    # 4) If it was a generic header, but we still didn't find anything in body, maybe the header actually matched something
+    if is_generic_header:
+        for label, h_kw, _ in _CLAUSE_TAXONOMY:
+            if _has_kw(h, h_kw):
+                return label
+
+    return "General Covenants"
 
 def parse_legal_structure(text: str):
     preamble = ""
@@ -111,118 +247,146 @@ def parse_legal_structure(text: str):
     else:
         preamble = text[:1000].strip()
         
-    # 2. Parse Parties
-    # Search for names associated with common legal roles
+    # 2. Parse Parties with Indian Legal Conventions
+    found_parties = []
+    # Pattern A: Name followed by hereinafter called / referred to as [ROLE]
+    role_pattern = r'(?i)(?:Sri\.?|Smt\.?|Mr\.?|Mrs\.?|Ms\.?|M/s\.?)?\s*([A-Za-z\s.]{3,50}?)\s*,?\s*(?:s/o|w/o|d/o|aged|residing)?[^.\n;]{0,120}?(?:hereinafter\s+(?:called|referred\s+to\s+as)\s+(?:the\s+)?["\']?(Vendor|Purchaser|Lessor|Lessee|Landlord|Tenant|Employer|Employee|Plaintiff|Defendant|Petitioner|Respondent)["\']?)'
+    for m in re.finditer(role_pattern, text):
+        raw_name = m.group(1).strip()
+        role = m.group(2).strip()
+        clean_name = re.sub(r'(?i)\b(hereinafter|called|the|referred|to|as)\b', '', raw_name).strip()
+        if len(clean_name) >= 3 and not any(p["name"].lower() == clean_name.lower() for p in found_parties):
+            found_parties.append({"name": clean_name, "role": role.capitalize(), "address": ""})
+
+    # Pattern B: Direct labeled party blocks
     name_matches = list(re.finditer(r'(?i)(?:full legal name|name|parties|between)\s*:\s*([A-Za-z\s.]+)', text))
-    found_names = []
     for m in name_matches:
         name = m.group(1).strip()
         name = re.split(r'\n|  ', name)[0].strip()
-        if len(name) > 3 and name.lower() not in ["lessor", "lessee", "owner", "tenant", "employer", "employee", "parties"]:
-            found_names.append(name)
-            
-    roles = []
-    if "lessor" in text.lower() or "owner" in text.lower():
-        roles.append("Lessor/Owner")
-    if "lessee" in text.lower() or "tenant" in text.lower():
-        roles.append("Lessee/Tenant")
-    if "employer" in text.lower():
-        roles.append("Employer")
-    if "employee" in text.lower():
-        roles.append("Employee")
-        
-    for idx, name in enumerate(found_names[:4]):
-        role = roles[idx] if idx < len(roles) else "Party"
-        address = ""
-        # Search for address near the name
-        addr_match = re.search(r'(?i)(?:address|residence|residing at)\s*:\s*([^\n]+)', text[text.find(name):text.find(name)+600])
-        if addr_match:
-            address = addr_match.group(1).strip()
-        parties.append({
-            "name": name,
-            "role": role,
-            "address": address
-        })
+        if len(name) > 3 and name.lower() not in ["lessor", "lessee", "owner", "tenant", "employer", "employee", "parties", "vendor", "purchaser", "plaintiff", "defendant"]:
+            if not any(p["name"].lower() == name.lower() for p in found_parties):
+                found_parties.append({"name": name, "role": "Party", "address": ""})
+
+    parties = found_parties[:4]
         
     # Remove fake placeholder parties: only keep legitimately parsed parties
     # (If none parsed, parties remains empty list [])
 
-    # 3. Parse Clauses (Legal boundary parser)
-    clause_matches = list(re.finditer(r'\n\s*(\d+)\.\s+([A-Z\s,]{3,40})\b', text))
-    if not clause_matches:
-        clause_matches = list(re.finditer(r'\n\s*(\d+)\.\s+([^\n]+)', text))
-        
-    for i, match in enumerate(clause_matches):
-        start = match.start()
-        end = clause_matches[i+1].start() if i + 1 < len(clause_matches) else len(text)
-        clause_num = int(match.group(1))
-        clause_header = match.group(2).strip().split('\n')[0].strip()
-        clause_text = text[start:end].strip()
-        header_lower = clause_header.lower()
-        text_lower = clause_text.lower()
-        
-        # Granular Semantic Clause Taxonomy
-        detected_type = "General Covenants"
-        if any(k in header_lower for k in ["rent", "financial", "deposit", "payment", "maintenance", "salary", "fee"]):
-            detected_type = "Financial & Consideration Schedules"
-        elif any(k in header_lower for k in ["premises", "property", "demised", "apartment", "flat"]):
-            detected_type = "Premises / Demised Property"
-        elif any(k in header_lower for k in ["emergency", "contact", "phone", "address"]):
-            detected_type = "Administrative / Contact Information"
-        elif any(k in header_lower for k in ["vehicle", "parking", "car", "scooter"]):
-            detected_type = "Premises Use / Parking Permission"
-        elif any(k in header_lower for k in ["witness", "signature", "signed", "attest", "execution"]):
-            detected_type = "Execution & Attestation"
-        elif any(k in header_lower for k in ["parties", "between", "lessor", "lessee"]):
-            detected_type = "Parties & Recitals"
-        elif any(k in header_lower for k in ["term", "tenure", "duration", "period"]):
-            detected_type = "Term & Tenure"
-        elif any(k in header_lower for k in ["termination", "cancellation", "notice"]):
-            detected_type = "Termination & Notice"
-        elif any(k in header_lower for k in ["confidential", "proprietary", "secrecy", "nda"]):
-            detected_type = "Confidentiality & Non-Disclosure"
-        elif any(k in header_lower for k in ["dispute", "governing", "jurisdiction", "court"]):
-            detected_type = "Governing Law & Disputes"
+    # 3. Parse Clauses (Multi-Boundary Legal Parser)
+    use_segmenter_v2 = os.environ.get("CLAUSE_SEGMENTER_V2", "0") == "1"
+    
+    if use_segmenter_v2:
+        try:
+            from clause_segmenter import segment_clauses
+            v2_clauses = segment_clauses(text)
             
-        state = None
-        if "karnataka" in text_lower or "bengaluru" in text_lower or "bangalore" in text_lower:
-            state = "Karnataka"
-        elif "telangana" in text_lower or "hyderabad" in text_lower:
-            state = "Telangana"
-        elif "maharashtra" in text_lower or "mumbai" in text_lower:
-            state = "Maharashtra"
-            
-        governing_law_present = "governing law" in text_lower or "jurisdiction" in text_lower or "courts" in text_lower
-        
-        clauses.append({
-            "clauseIndex": clause_num,
-            "clauseHeader": clause_header,
-            "rawText": clause_text,
-            "sanitizedText": clause_text,
-            "detectedType": detected_type,
-            "jurisdiction": {
-                "country": "India",
-                "state": state,
-                "governingLawClausePresent": governing_law_present
-            }
-        })
-        
+            if len(v2_clauses) >= 2:
+                # Coverage check (~90% of body). We calculate body length from start of first clause to end of last clause.
+                first_idx = text.find(v2_clauses[0]["rawText"][:20])
+                if first_idx == -1: first_idx = 0
+                body_len = len(text) - first_idx
+                clause_len = sum(len(c["rawText"]) for c in v2_clauses)
+                if body_len > 0 and (clause_len / body_len) > 0.70: # 70% to be safe with coverage check
+                    is_notice = _looks_like_legal_notice(text)
+                    for c in v2_clauses:
+                        header_lower = c["clauseHeader"].lower()
+                        text_lower = c["rawText"].lower()
+                        c["detectedType"] = classify_clause_type(c["clauseHeader"], c["rawText"], is_notice)
+                        state = None
+                        if "karnataka" in text_lower or "bengaluru" in text_lower or "bangalore" in text_lower:
+                            state = "Karnataka"
+                        elif "telangana" in text_lower or "hyderabad" in text_lower:
+                            state = "Telangana"
+                        elif "maharashtra" in text_lower or "mumbai" in text_lower:
+                            state = "Maharashtra"
+                        c["jurisdiction"] = {
+                            "country": "India",
+                            "state": state,
+                            "governingLawClausePresent": "governing law" in text_lower or "jurisdiction" in text_lower or "courts" in text_lower
+                        }
+                    clauses = v2_clauses
+        except Exception as e:
+            print("V2 segmenter failed:", e)
+            pass
+
     if not clauses:
-        # Fallback: split by paragraph if no numbered clauses found
-        paragraphs = [p.strip() for p in text.split('\n\n') if p.strip()]
-        for idx, p in enumerate(paragraphs):
+        clause_patterns = [
+            r'\n\s*(\d+)\.\s+([A-Z\s,]{3,40})\b',
+            r'\n\s*(\d+)\.\s+([^\n]+)',
+            r'\n\s*(\d+)\)\s+([^\n]+)',
+            r'(?i)\n\s*(?:Clause|Section|Article)\s+(\d+)[:.-]?\s*([^\n]*)',
+            r'\n\s*([IVXLCDM]+)[\.)]\s+([^\n]+)'
+        ]
+        clause_matches = []
+        for pat in clause_patterns:
+            m_list = list(re.finditer(pat, text))
+            if len(m_list) >= 2:
+                clause_matches = m_list
+                break
+                
+        if not clause_matches:
+            clause_matches = list(re.finditer(r'\n\s*(\d+)[\.)]\s+([^\n]+)', text))
+            
+        is_notice = _looks_like_legal_notice(text)
+        for i, match in enumerate(clause_matches):
+            start = match.start()
+            end = clause_matches[i+1].start() if i + 1 < len(clause_matches) else len(text)
+            raw_num = match.group(1)
+            try:
+                clause_num = int(raw_num)
+            except ValueError:
+                clause_num = i + 1
+                
+            header_candidate = match.group(2).strip().split('\n')[0].strip() if len(match.groups()) > 1 else f"Clause {clause_num}"
+            clause_header = header_candidate or f"Clause {clause_num}"
+            clause_text = text[start:end].strip()
+            header_lower = clause_header.lower()
+            text_lower = clause_text.lower()
+            
+            # Granular Semantic Clause Taxonomy (header-weighted, word-boundary, notice-aware)
+            detected_type = classify_clause_type(clause_header, clause_text, is_notice)
+                
+            state = None
+            if "karnataka" in text_lower or "bengaluru" in text_lower or "bangalore" in text_lower:
+                state = "Karnataka"
+            elif "telangana" in text_lower or "hyderabad" in text_lower:
+                state = "Telangana"
+            elif "maharashtra" in text_lower or "mumbai" in text_lower:
+                state = "Maharashtra"
+                
+            governing_law_present = "governing law" in text_lower or "jurisdiction" in text_lower or "courts" in text_lower
+            
             clauses.append({
-                "clauseIndex": idx + 1,
-                "clauseHeader": f"Section {idx + 1}",
-                "rawText": p,
-                "sanitizedText": p,
-                "detectedType": "General Paragraph",
+                "clauseIndex": clause_num,
+                "clauseHeader": clause_header,
+                "rawText": clause_text,
+                "sanitizedText": clause_text,
+                "detectedType": detected_type,
                 "jurisdiction": {
                     "country": "India",
-                    "state": None,
-                    "governingLawClausePresent": False
+                    "state": state,
+                    "governingLawClausePresent": governing_law_present
                 }
             })
+            
+        if not clauses:
+            # Fallback: segment into meaningful paragraphs or sections
+            paragraphs = [p.strip() for p in re.split(r'\n{2,}|\.\s+(?=[A-Z0-9])', text) if len(p.strip()) > 30]
+            if not paragraphs:
+                paragraphs = [text.strip()]
+            for idx, p in enumerate(paragraphs[:8]):
+                clauses.append({
+                    "clauseIndex": idx + 1,
+                    "clauseHeader": "General Paragraph" if idx == 0 and len(paragraphs) == 1 else f"Section {idx + 1}",
+                    "rawText": p,
+                    "sanitizedText": p,
+                    "detectedType": "General Paragraph" if idx == 0 and len(paragraphs) == 1 else "Contractual Covenant",
+                    "jurisdiction": {
+                        "country": "India",
+                        "state": "Karnataka" if "karnataka" in p.lower() or "bengaluru" in p.lower() else None,
+                        "governingLawClausePresent": "jurisdiction" in p.lower() or "governing" in p.lower()
+                    }
+                })
             
     return {
         "preamble": preamble,
@@ -231,6 +395,7 @@ def parse_legal_structure(text: str):
     }
 
 def process_text_pipeline(text: str, source_language: str) -> DocumentResponse:
+    use_v2 = os.environ.get("KN_NORMALIZER_V2", "1") == "1"
     original_length = len(text)
     raw_text = text
     
@@ -238,17 +403,22 @@ def process_text_pipeline(text: str, source_language: str) -> DocumentResponse:
     # STAGE 0: PRE-PROCESSING: Unicode Normalization
     # ==========================================
     
-    # Custom Kannada "Joint Character" Unicode Fix
-    text = re.sub(r'([\u0C80-\u0CFF])\s+([\u0CBE-\u0CCC\u0CCD])', r'\1\2', text)
-
-    # Modernize Kannada archaic script
-    text = text.replace('\u0CB1', '\u0CB0').replace('\u0CDE', '\u0CB3')
+    if use_v2:
+        text = fix_joint_characters(text)
+        text = text.replace('\u0CB1', '\u0CB0').replace('\u0CDE', '\u0CB3')
+        text = unicodedata.normalize('NFKC', text)
+    else:
+        # Custom Kannada "Joint Character" Unicode Fix
+        text = re.sub(r'([\u0C80-\u0CFF])\s+([\u0CBE-\u0CCC\u0CCD])', r'\1\2', text)
     
-    # Fix broken conjuncts (Vattus) where the virama is separated from the trailing consonant
-    text = re.sub(r'(\u0CCD)\s+([\u0C80-\u0CFF])', r'\1\2', text)
-
-    # Standard Unicode Normalization (NFKC)
-    text = unicodedata.normalize('NFKC', text)
+        # Modernize Kannada archaic script
+        text = text.replace('\u0CB1', '\u0CB0').replace('\u0CDE', '\u0CB3')
+        
+        # Fix broken conjuncts (Vattus) where the virama is separated from the trailing consonant
+        text = re.sub(r'(\u0CCD)\s+([\u0C80-\u0CFF])', r'\1\2', text)
+    
+        # Standard Unicode Normalization (NFKC)
+        text = unicodedata.normalize('NFKC', text)
 
     # ==========================================
     # STAGE 1: OCR Sanity Check & Formatting Fixes
@@ -367,37 +537,56 @@ def process_text_pipeline(text: str, source_language: str) -> DocumentResponse:
             "ಅಕ್ರಮ ಚಟುವಟಿಕೆ ನಿಷೇಧ": "Illegal, unlawful, or nuisance activities are strictly prohibited",
             "ಅನಧಿಕೃತ ಮಾರ್ಪಾಡು": "Unauthorized alteration"
         }
-        for k_word, e_word in kannada_map.items():
-            text = text.replace(k_word, f" {e_word} ")
+        if use_v2:
+            text = apply_glossary(text, kannada_map)
+        else:
+            for k_word, e_word in kannada_map.items():
+                text = text.replace(k_word, f" {e_word} ")
 
     # ==========================================
     # STAGE 2: Efficient Translation (Google Translate Backend)
     # ==========================================
     translated_text = text
+    translation_quality = {}
     if source_language.lower() != "en":
-        try:
-            translator = GoogleTranslator(source='auto', target='en')
-            max_len = 1000 
-            translated_chunks = []
-            text_chunks = [text[i:i+max_len] for i in range(0, len(text), max_len)]
-            
-            for chunk in text_chunks:
-                if chunk.strip():
-                    try:
-                        res = translator.translate(chunk)
-                        if res and ("That's an error" in res or "That’s all we know" in res or "Error 500" in res or "Error 429" in res):
-                            print("[AI Engine] Google Translate rate limit or server error detected. Falling back to raw chunk.")
+        if use_v2:
+            report = kannada_quality_report(sanitized_regional_text)
+            translation_quality.update(report)
+            try:
+                translator = GoogleTranslator(source='auto', target='en')
+                chunks = split_for_translation(text, max_len=1000)
+                translation_quality["total_chunks"] = len(chunks)
+                results, failed_indices = translate_with_retry(chunks, translator, retries=3, backoff=2)
+                translation_quality["failed_chunks"] = len(failed_indices)
+                translated_text = ''.join(results)
+            except Exception as e:
+                print("Translation Error (V2):", e)
+                translated_text = text
+                translation_quality["failed_chunks"] = translation_quality.get("total_chunks", 1)
+        else:
+            try:
+                translator = GoogleTranslator(source='auto', target='en')
+                max_len = 1000 
+                translated_chunks = []
+                text_chunks = [text[i:i+max_len] for i in range(0, len(text), max_len)]
+                
+                for chunk in text_chunks:
+                    if chunk.strip():
+                        try:
+                            res = translator.translate(chunk)
+                            if res and ("That's an error" in res or "That’s all we know" in res or "Error 500" in res or "Error 429" in res):
+                                print("[AI Engine] Google Translate rate limit or server error detected. Falling back to raw chunk.")
+                                translated_chunks.append(chunk)
+                            else:
+                                translated_chunks.append(res if res else chunk)
+                        except Exception as chunk_err:
+                            print("Chunk Translation Error:", chunk_err)
                             translated_chunks.append(chunk)
-                        else:
-                            translated_chunks.append(res if res else chunk)
-                    except Exception as chunk_err:
-                        print("Chunk Translation Error:", chunk_err)
-                        translated_chunks.append(chunk)
-            
-            translated_text = ''.join(translated_chunks)
-        except Exception as e:
-            print("Translation Error:", e)
-            translated_text = text
+                
+                translated_text = ''.join(translated_chunks)
+            except Exception as e:
+                print("Translation Error:", e)
+                translated_text = text
 
     # ==========================================
     # STAGE 2.5: Domain-Specific Post-Editing & Noise Stripping
@@ -406,7 +595,8 @@ def process_text_pipeline(text: str, source_language: str) -> DocumentResponse:
         translated_text = re.sub(r'(?i)\bFinance Minister\b', 'Owner', translated_text)
         translated_text = re.sub(r'(?i)\bFinancer\b', 'Owner', translated_text)
         translated_text = re.sub(r'(?i)\bSecond Class\b', 'Tenant', translated_text)
-        translated_text = re.sub(r'[\u0C80-\u0CFF]+', '', translated_text)
+        if not use_v2:
+            translated_text = re.sub(r'[\u0C80-\u0CFF]+', '', translated_text)
 
     # ==========================================
     # STAGE 3: NLP Presidio Anonymization (High-Risk PII on English text)
@@ -498,7 +688,14 @@ def process_text_pipeline(text: str, source_language: str) -> DocumentResponse:
     doc_domain = classification_result.get("domain", "General")
     doc_state = None
     if structure_data.get("clauses") and len(structure_data["clauses"]) > 0:
-        doc_state = structure_data["clauses"][0].get("jurisdiction", {}).get("state")
+        use_segmenter_v2 = os.environ.get("CLAUSE_SEGMENTER_V2", "0") == "1"
+        if use_segmenter_v2:
+            states = [c.get("jurisdiction", {}).get("state") for c in structure_data["clauses"] if c.get("jurisdiction", {}).get("state")]
+            if states:
+                from collections import Counter
+                doc_state = Counter(states).most_common(1)[0][0]
+        else:
+            doc_state = structure_data["clauses"][0].get("jurisdiction", {}).get("state")
         
     risk_analysis_results = analyze_all_clauses(
         clauses=structure_data.get("clauses", []),
@@ -526,7 +723,8 @@ def process_text_pipeline(text: str, source_language: str) -> DocumentResponse:
         structure=structure_data,
         classification=classification_result,
         risk_analysis=risk_analysis_results,
-        summary_output=summary_output_data
+        summary_output=summary_output_data,
+        translation_quality=translation_quality if use_v2 else {}
     )
 
 @app.get("/health")

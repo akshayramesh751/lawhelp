@@ -1,110 +1,148 @@
-I have a working React frontend for a legal services marketplace called NyayaConnect. Now I need to build and connect the backend. Guide me step by step with code. Ask me one stage at a time and wait for confirmation before proceeding.
+<USER_REQUEST>
+# CLAUDE CODE PROMPT — CaseCounsel (lawhelp): Kannada handling, clause detection, synthetic accuracy testing
 
-## PROJECT CONTEXT
-- Frontend: React + Tailwind, currently uses hardcoded mock data
-- Target stack: Node.js + Express (backend), MongoDB Atlas (database), Twilio (WhatsApp notifications)
-- The app has: Lawyer listings, Bookings (pending/confirmed/rejected/completed), Ratings & Reviews, WhatsApp notifications to lawyers and users
+Copy everything below this line into Claude Code, opened at the repo root (the folder containing `ai-service/`, `server/`, `project/`, `scratch/`).
 
----
+You are a senior backend/NLP engineer working on an EXISTING, WORKING project called CaseCounsel (repo name `lawhelp`, formerly NyayaConnect). Your job is to make three improvements WITHOUT breaking anything that already works and WITHOUT creating merge conflicts. Work phase by phase, log everything, and stop for my confirmation between phases.
 
-## STAGE 1 — Project Setup
-Help me initialize a Node.js + Express backend project.
-- Create folder structure: /server with subfolders /routes /models /controllers /middleware /utils
-- Initialize package.json with dependencies: express, mongoose, dotenv, cors, twilio, nodemon
-- Create a basic Express server (index.js) with CORS enabled for localhost:5173 (Vite frontend)
-- Set up .env file template with: MONGO_URI, PORT, TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_WHATSAPP_FROM
-- Confirm everything runs with: node index.js → "Server running on port 5000"
+## 0. PROJECT CONTEXT (read first, do not skip)
 
-## STAGE 2 — MongoDB Atlas Setup + Mongoose Models
-Help me connect to MongoDB Atlas and create all data models.
+Three services:
+- `ai-service/` — Python FastAPI. Core pipeline is `process_text_pipeline()` in `ai-service/main.py`:
+  Stage 0/1 Kannada + OCR normalization -> PII regex redaction -> Kannada glossary replacement -> chunked Google Translate (1000 chars) -> Kannada stripping -> Presidio -> `parse_legal_structure()` (clause splitting) -> `classifier.py` (3-tier, `taxonomy.json`) -> `clause_analyzer.analyze_all_clauses()` (Route A `rule_engine.py` -> RAG `rag_service.py` -> authority gate `validate_authority_strength()` -> batched LLM via `llm_gateway.py` -> `citation_auditor.py`) -> `summarizer.py`.
+- `server/` — Node/Express, MongoDB, Tesseract.js OCR in `server/controllers/aiController.js`, Firebase auth.
+- `project/` — React/Vite frontend (`AIAnalysisPage.tsx` renders `riskAnalysis`).
+- `scratch/` — existing node test scripts. Existing phase logs: `PHASE_2_LOG.md`, `PHASE_4_LOG.md` ... `PHASE_7_LOG.md` at repo root. Read at least `PHASE_5_LOG.md` and `PHASE_7_LOG.md` to copy their log style.
 
-Models needed:
+## 1. PROBLEMS TO SOLVE (already diagnosed — verify each yourself before changing code)
 
-1. **Lawyer**
-   - name (String), specializations ([String]), city (String), experience (Number)
-   - rating (Number, default 0), totalReviews (Number, default 0)
-   - cost (Number), languages ([String]), bio (String)
-   - education (String), barRegNo (String)
-   - phone (String) — for WhatsApp notifications
-   - isVerified (Boolean, default false)
+### Item 1 — Kannada text is broken / not understood by the model
+Diagnosed causes:
+1. `main.py` Kannada glossary (`kannada_map`) is applied in dict order with `str.replace`, so short keys fire before longer phrases that contain them. Example: `ಮುಂಗಡ` replaces first, so `ಮುಂಗಡ ಹಣ ಮರುಪಾವತಿ ಹಕ್ಕು` is left half-translated. Same for `ಅವಧಿ` vs `ಪ್ರೊಬೆಷನರಿ ಅವಧಿ`, `ಬಾಡಿಗೆ` vs `ಉಪ ಬಾಡಿಗೆ`. Fix = apply keys sorted by length, longest first.
+2. `server/controllers/aiController.js`: `extractText` OCRs with `'eng+kan'`, but `reprocessDocument` uses `'eng'` only (two places). Reprocessed Kannada scans become garbage. Also no `langPath` is configured for the `kan.traineddata` shipped in `server/` (check the installed tesseract.js version and how it loads languages before deciding whether to wire it; if wiring is risky, leave the default behaviour and document it).
+3. Translation failure is silent and destructive: if Google Translate errors or is rate-limited, the raw Kannada chunk is kept and then Stage 2.5 deletes ALL remaining Kannada (`re.sub(r'[\u0C80-\u0CFF]+', '', ...)`). The model receives empty/partial text and nobody is told.
+4. Translation chunks are cut every 1000 characters regardless of sentence, line, or redaction-placeholder boundaries and are joined with `''`. This can split `[AADHAAR_REDACTED]`-style placeholders and lose line breaks/numbering that clause parsing needs.
+5. Stage 0 regexes use `\s+`, which also matches newlines, so they can glue words across lines.
+6. Likely (confirm with a test, do not assume): many Kannada PDFs use legacy fonts (Nudi/Baraha). PyMuPDF returns garbled Latin-looking text for these, which passes the current "text density" check. Garbled extraction should be detected and routed to OCR.
 
-2. **User**
-   - name (String), email (String, unique), phone (String)
-   - passwordHash (String)
-   - createdAt (Date)
+### Item 2 — Only 3–4 clauses get highlighted in English documents
+Two separate causes:
+A. SEGMENTATION. `parse_legal_structure()` only splits on `\n N. Heading`. It first tries an ALL-CAPS heading regex and only falls back to the generic regex if the caps regex matched ZERO times. On a mixed-case 6-clause contract, only clauses 1-3 are found and clauses 4-6 (including non-compete and termination) are merged into clause 3. Formats such as `1)`, `(1)`, `Clause 1`, `Article I`, `Section 5`, `1.1`, `(a)/(i)` sub-items, `WHEREAS` recitals, `SCHEDULE/ANNEXURE`, and "number alone on its own line" (common PDF output) are not recognised and fall back to blank-line paragraphs. Also `clauseIndex` is taken from the document's own number, and `clause_analyzer` keys results by `clauseIndex`, so duplicate numbers (two lists both starting at "1.") would silently overwrite each other.
+B. DETECTION COVERAGE. `rule_engine.py` has ~5 risk rules, mostly employment. Rental/NDA/vendor/criminal-adjacent clauses fall through to RAG; the knowledge base is only ~16 chunks / 9 acts; `validate_authority_strength()` then short-circuits weak matches to `NO_ISSUE_DETECTED`; and `heuristic_grounded_evaluation()` only recognises governing-law and indemnity. Note also that `red_flag_terms` contains the substring `"bar"`, which matches words like "embargo"/"barrier". The classifier only knows 5 domains, so criminal-adjacent documents end up "Unclassified" and RAG gets no domain filter. `doc_state` is taken from the first clause only.
 
-3. **Booking**
-   - userId (ref: User), lawyerId (ref: Lawyer)
-   - date (Date), timeSlot (String)
-   - status (enum: ['pending', 'confirmed', 'rejected', 'completed'], default: 'pending')
-   - cost (Number)
-   - createdAt (Date)
+### Item 3 — No one-sided test documents
+Existing test texts (see `DOCUMENT_UPLOAD_SPECIFICATIONS_AND_GUIDELINES.md` scenarios A–D and `scratch/test_phase5_clause_analysis.js`) are mostly balanced and tiny (about 6 hand-written clauses). `COMPREHENSIVE_VERIFICATION_REPORT.md` claims 100% accuracy, but that rests on those few clauses. We need a labelled synthetic corpus of heavily one-sided agreements plus balanced controls, and an evaluation harness.
 
-4. **Review**
-   - bookingId (ref: Booking), userId (ref: User), lawyerId (ref: Lawyer)
-   - rating (Number, 1–5), comment (String)
-   - createdAt (Date)
+## 2. NON-NEGOTIABLE RULES (to avoid breakage and merge errors)
 
-Also write a seed script (seed.js) that inserts the 8 mock lawyers from my frontend into MongoDB.
+1. ADDITIVE ONLY. Put new logic in NEW files. Edit existing files with small, localized diffs. NO reformatting, NO import re-ordering, NO renaming, NO line-ending changes, NO moving code around in existing files.
+2. NEVER modify, delete, or commit changes to: `ai-service/chroma_db/**`, `*.traineddata`, any `package-lock.json`, `server/config/firebase-service-account.json`, `.env*`. Never print secret values.
+3. KEEP ALL API/SCHEMA SHAPES IDENTICAL: `DocumentResponse`, `ClauseModel`, the `riskAnalysis` item shape, and the Mongoose schemas. The Node server and React app must need ZERO changes. The only allowed schema change is an ADDITIVE optional field with a default (e.g. `translation_quality: dict = {}` on `DocumentResponse`), and only if clearly needed.
+4. FEATURE FLAGS + FALLBACK. Every new behaviour sits behind an env flag (`KN_NORMALIZER_V2`, `CLAUSE_SEGMENTER_V2`, `RULE_PACKS_V2`; default "1" once tests pass). Wrap new code paths in try/except and fall back to the legacy behaviour on any exception. Setting a flag to "0" must reproduce the legacy output exactly. Keep the legacy functions in place (rename nothing; call them as the fallback).
+5. NO NEW HEAVY DEPENDENCIES. Do not edit `requirements.txt`. If you need pytest, create `ai-service/requirements-dev.txt`. For PDF generation use PyMuPDF (`fitz`), which is already installed.
+6. NO LLM/NETWORK CALLS IN TESTS. Tests must run offline and spend no API quota: unset LLM keys or monkeypatch `llm_gateway`, and monkeypatch `GoogleTranslator`. Verify how `llm_gateway.generate_json` behaves with no keys and note it in the log.
+7. NO LEGAL HALLUCINATION. Every statute citation in new rules must be an Act that already exists in `KNOWN_STATUTES` (`citation_auditor.py`). Do NOT invent section numbers. If you are not certain a section number is right, emit `ONE_SIDED` or `REQUIRES_REVIEW` with `actName: "N/A"` rather than a guessed citation. Never cite an Act you cannot name precisely. The product output is informational, not legal advice.
+8. NO OVERFITTING. Do not write rules that match synthetic-document-specific names, numbers, or exact sentences. Rules must be generic patterns.
+9. HONEST METRICS. Report real numbers even when poor. Never hard-code expected outputs, weaken assertions, or skip failing tests to make things pass. Failures go into the log as known limitations.
+10. GIT HYGIENE. One branch per phase, created from an up-to-date main: `phase-8-baseline-tests`, `phase-9-kannada`, `phase-10-clauses`, `phase-11-synthetic-eval`. Small commits with clear messages. Stage files by explicit path ONLY (never `git add .` or `git add -A`) and run `git status` before each commit to confirm no binary/secret/lock files are staged. Do not merge, rebase onto other phase branches, or force-push. If the working tree is dirty at the start, stop and tell me.
 
-## STAGE 3 — REST API Routes
-Build all Express routes and controllers:
+## 3. LOGGING REQUIREMENT (important)
 
-**Lawyers**
-- GET /api/lawyers — fetch all, support query params: ?specialization=&city=&minRating=&maxCost=
-- GET /api/lawyers/:id — fetch single lawyer with reviews
+For EACH phase create a log at repo root: `PHASE_8_LOG.md`, `PHASE_9_LOG.md`, `PHASE_10_LOG.md`, `PHASE_11_LOG.md`, following the style of the existing `PHASE_5_LOG.md` / `PHASE_7_LOG.md`. Write the log INCREMENTALLY as you work (append after each step), not at the end, so it reflects what actually happened. Each log must contain:
 
-**Bookings**
-- POST /api/bookings — create booking (body: userId, lawyerId, date, timeSlot, cost), status = pending
-- GET /api/bookings?userId= — get all bookings for a user
-- PATCH /api/bookings/:id/status — update status (for lawyer approve/reject, or system complete)
+- Title: `# Phase N Implementation Log — <name>` and one-paragraph purpose.
+- `## 🧭 Problem Verified` — what you reproduced, with the exact command/output proving it (short).
+- `## 📂 Summary of Changes` — every file, as `File Created` / `File Modified` / `File Untouched-on-purpose`, with 1-3 lines on what and why. For modified existing files list the exact functions/lines touched.
+- `## 🚩 Feature Flags & Fallbacks` — flag names, defaults, what "0" restores.
+- `## 🧠 Decisions & Rationale` — alternatives considered and why rejected.
+- `## 🧪 Verification Commands` — copy-pasteable commands.
+- `## ✅ Verified Test Cases` — PASS/FAIL per test, plus before/after metrics where relevant.
+- `## ⚠️ Known Limitations & Open Questions` — honest list.
+- `## ↩️ Rollback` — how to disable or revert this phase.
+- `## 🔀 Git` — branch name and commit list (hash + message).
 
-**Reviews**
-- POST /api/reviews — submit review (body: bookingId, userId, lawyerId, rating, comment)
-  - After saving: recalculate lawyer's average rating and update Lawyer document
-- GET /api/reviews?lawyerId= — get all reviews for a lawyer
+At the end of EACH phase: run the full test suite (new tests + the golden regression), finalize that phase's log, commit, then STOP and give me a short summary (what changed, test results, anything risky). Wait for me to say "continue" before starting the next phase.
 
-## STAGE 4 — Twilio WhatsApp Integration
-Help me set up Twilio to send WhatsApp messages.
+## 4. PHASES
 
-Two triggers:
+### PHASE 8 — Safety net first (no behaviour change)
+Goal: lock current behaviour so every later change can be proven non-breaking.
+1. Create `ai-service/requirements-dev.txt` (pytest) and `ai-service/tests/` with `conftest.py` that makes tests offline and deterministic (no LLM keys, mocked translator).
+2. Create `ai-service/tests/golden/` and a script `ai-service/tests/make_baseline.py` that runs `process_text_pipeline()` directly (not via HTTP) on: Scenarios A, B, C, D from `DOCUMENT_UPLOAD_SPECIFICATIONS_AND_GUIDELINES.md`, plus the 6 clause scenarios from `PHASE_5_LOG.md`, plus the archaic Kannada string from `scratch/test_pipeline_features.js`. Store outputs as JSON (stable keys; strip timestamps/IDs).
+3. Create `ai-service/tests/test_golden_regression.py` that re-runs those inputs and diffs against the stored baseline, with a readable diff on failure and an explicit allow-list mechanism for INTENDED changes (each allow-list entry needs a reason string).
+4. Confirm the baseline passes on unmodified code. Do NOT change any existing source file in this phase.
+5. Write `PHASE_8_LOG.md`.
 
-1. **On booking creation (POST /api/bookings)**:
-   Send to lawyer's phone:
-   "New booking request from [User Name] for [Date] at [Time]. Reply CONFIRM or REJECT via the whatsapp chat."
+### PHASE 9 — Kannada handling
+1. Write failing tests first in `ai-service/tests/test_kannada_normalizer.py` reproducing causes 1, 3, 4, 5, 6 (glossary shadowing, silent Kannada deletion on translation failure, placeholder splitting, newline gluing, legacy-font garble detection).
+2. Create `ai-service/kannada_normalizer.py` containing:
+   - `apply_glossary(text, glossary)` — longest-key-first.
+   - `kannada_quality_report(text)` — metrics such as Kannada ratio, orphan viramas/matras, replacement characters, and a `looks_garbled` flag (including the legacy-font pattern: long runs of Latin-1 supplement symbols/diacritics with no valid Kannada).
+   - `split_for_translation(text, max_len=1000)` — splits on newlines/sentence ends (including the Kannada danda-style punctuation if present), never inside `[..._REDACTED]` placeholders, never mid-word, and preserves newlines.
+   - `translate_with_retry(chunks, translator, retries, backoff)` — returns per-chunk results and which chunks failed.
+   - Same-line-only versions of the Stage 0 joint-character fixes (use `[ \t]+` not `\s+`).
+3. Minimal edits in `ai-service/main.py` behind `KN_NORMALIZER_V2`: sort the glossary (this is a tiny change), use the splitter/retry in Stage 2, and replace the destructive Stage 2.5 deletion so that Kannada from FAILED chunks is kept and marked (e.g. `[UNTRANSLATED_KANNADA]`) instead of silently removed. Add an additive optional `translation_quality` field (failed_chunks, total_chunks, garbled flag, kannada_ratio) to the response. Legacy path stays as the fallback.
+4. In `aiController.js`: change the two `reprocessDocument` Tesseract calls from `'eng'` to `'eng+kan'` to match `extractText` (a 2-line diff). Investigate `langPath`/`kan.traineddata` loading; wire it only if you can verify it works offline without breaking the English path, otherwise document the finding in the log and leave default behaviour. If the garble check says extracted PDF text is garbled, make `/process-pdf` return the same 422 `SCANNED_PDF_DETECTED` the Node fallback already understands (behind the flag).
+5. Tests must include: Kannada clause numbering/newlines surviving the pipeline, glossary long-phrase cases, translation failure keeps content + sets the quality flag, English-only input byte-identical to baseline, Scenario D still passes.
+6. Run the golden regression: English outputs must be unchanged; any Kannada-output change must be listed in the allow-list with a reason.
+7. Write `PHASE_9_LOG.md`.
 
-2. **On booking status update (PATCH /api/bookings/:id/status)**:
-   If confirmed → Send to user's phone:
-   "✅ Your booking with [Lawyer Name] on [Date] at [Time] is confirmed."
-   If rejected → Send to user's phone:
-   "❌ Your booking with [Lawyer Name] was not accepted. Please try booking another lawyer."
+### PHASE 10 — Clause segmentation + detection coverage
+Part A — Segmentation
+1. Failing tests first in `ai-service/tests/test_clause_segmenter.py`: mixed-case headings (the 6-clause case must give 6), `1)`, `(1)`, `Clause N`, `Article I/II`, `Section N`, `1.1/1.2`, `(a)/(i)` sub-items, number alone on its own line, `WHEREAS` recitals, `SCHEDULE/ANNEXURE`, unnumbered ALL-CAPS headings, `--- PAGE n ---` markers ignored, duplicate numbering, Kannada-derived text.
+2. Create `ai-service/clause_segmenter.py` with `segment_clauses(text)` returning dicts in EXACTLY the existing clause shape (`clauseIndex, clauseHeader, rawText, sanitizedText, detectedType, jurisdiction`). Requirements: `clauseIndex` is sequential and unique (1..N) while the original label is kept in `clauseHeader`; split over-long clauses into their sub-items; text coverage check (clauses together must cover at least ~90% of the body); choose the numbering scheme by consistency across the document, not by "first regex that matches".
+3. Edit `parse_legal_structure()` minimally: behind `CLAUSE_SEGMENTER_V2`, call the new segmenter inside try/except; fall back to the legacy code if it raises, returns fewer than 2 clauses, or fails the coverage check. Keep legacy code untouched. Also fix `doc_state` to use the most common state across clauses instead of only the first clause.
+4. Improve `detectedType` using body text when the header is generic (additive; never remove existing types).
 
-Use Twilio sandbox for WhatsApp. Show me how to configure and test it.
+Part B — Detection coverage
+5. Create `ai-service/rule_packs.py`: data-driven, domain-tagged generic rules (id, domains, patterns, riskLevel, finding, statute-or-N/A, reasoning, confidence). Cover at least:
+   - Rental: landlord entry without notice; forfeiture of entire deposit / no refund timeline; unilateral rent escalation; heavy lock-in penalty; eviction/self-help without due process; tenant liable for structural repairs; waiver of statutory tenant protections.
+   - Employment: excessive training/bond recovery; withholding salary or original certificates; unilateral change of terms or transfer; waiver of overtime/statutory benefits; indefinite probation; over-broad IP assignment.
+   - NDA: perpetual confidentiality; one-way obligations in a "mutual" NDA; penalty-style liquidated damages; waiver of injunctive/legal remedies.
+   - Vendor/MSA: one-sided uncapped liability; unilateral termination/modification; auto-renewal traps; payment withheld at sole discretion.
+   - Criminal-adjacent (surety/indemnity bond, compromise deed, undertaking): clauses that waive the right to approach courts, impose open-ended indemnity, or bind a person to unlimited personal liability.
+   Use only statutes present in `KNOWN_STATUTES` (rule 7 above). Prefer `ONE_SIDED` / `REQUIRES_REVIEW` when the legal position is contextual.
+6. Hook it in with a tiny edit at the END of `evaluate_deterministic_rules()` (just before the final `return None`), behind `RULE_PACKS_V2`, in try/except, so ALL existing rules keep priority and existing outputs do not change.
+7. Add `one_sidedness_signals(text)` in `rule_packs.py` and use it in `clause_analyzer.analyze_all_clauses()` so a clause with strong one-sidedness signals is NOT short-circuited to `NO_ISSUE_DETECTED` by the authority gate (it goes to the LLM batch, or to `REQUIRES_REVIEW` in the offline heuristic path). Fix the `"bar"` substring false positive using word-boundary matching (tiny, tested change).
+8. Classifier: additively extend `taxonomy.json` with a "Criminal / Bail, Surety & Undertaking" domain (headers + weighted keywords) ONLY if the golden regression shows the existing 4 scenario classifications are unchanged. Do not touch `chroma_db` or re-seed the knowledge base; if you think new knowledge-base content is needed, list it in the log as a recommendation (with a seed-script draft under `scratch/`, not run).
+9. Tests per rule: at least one positive and one negative example (a clause that looks similar but is fair) to protect against false positives. Re-run the golden regression and the 6 Phase-5 scenarios; they must be unchanged.
+10. Write `PHASE_10_LOG.md`.
 
-## STAGE 5 — Frontend API Integration
-Help me replace all mock data in the React frontend with real API calls.
+### PHASE 11 — Synthetic one-sided corpus + evaluation harness
+1. Create `ai-service/tests/synthetic/generate_synthetic_docs.py`: deterministic (fixed seed), template + clause-bank based, producing `.txt` and a few `.pdf` (via PyMuPDF) documents in `ai-service/tests/synthetic/docs/`, plus `manifest.json`.
+2. Domains: employment, rental, NDA, vendor/MSA, criminal-adjacent (surety/indemnity bond, compromise deed). For each domain generate: balanced CONTROL docs, and one-sided docs at three severities (mild, moderate, extreme). Vary numbering/heading styles (`1.`, `1)`, `Clause 1`, `ARTICLE I`, `1.1`, mixed-case headings) so segmentation is exercised. Use fictional names only, no real PII. Include at least 4 Kannada documents (rental + employment), each flagged `needs_native_review: true` in the manifest.
+3. `manifest.json` per document: id, domain, language, severity, numbering style, `split` ("dev" or "heldout", roughly 70/30), expected clause count, and per clause the expected `riskLevel` and a `rule_id` or tag. Mark all labels `needs_lawyer_review: true`.
+4. Create `ai-service/tests/evaluate_pipeline.py` (offline, no LLM) that reports, separately for dev and heldout: segmentation recall (found vs expected clauses), per-clause exact risk-level accuracy, "flagged vs not flagged" precision/recall/F1, false-positive rate on controls, severity-ordering sanity (extreme >= moderate >= mild >= control), per-domain table, and a confusion matrix. Write `ai-service/tests/reports/eval_<timestamp>.md` and `.json` (add `ai-service/tests/reports/` to `.gitignore`; this is the only allowed `.gitignore` change).
+5. Run the evaluation THREE ways and put the comparison table in the log: (a) all flags "0" (legacy), (b) Phase 9 flag only, (c) all flags "1". Do not tune rules while looking at heldout results; if you change rules after seeing heldout numbers, say so in the log.
+6. Add `ai-service/tests/test_synthetic_smoke.py` with loose, honest thresholds (e.g. controls must not be flagged HIGH_RISK; extreme docs must have at least one HIGH_RISK or ONE_SIDED), and document the real measured numbers beside them.
+7. Write `PHASE_11_LOG.md` including a "How to regenerate the corpus and re-run the evaluation" section.
 
-- Install axios in frontend
-- Create /src/api/lawyers.js, /src/api/bookings.js, /src/api/reviews.js — each exports async functions
-- Replace mock lawyers array with useEffect + axios.get('/api/lawyers') call
-- Replace filter logic: pass filters as query params to the API instead of filtering client-side
-- Replace mock bookings in dashboard with real fetch by userId
-- Wire up POST /api/bookings on "Confirm Booking" button
-- Wire up POST /api/reviews on rating form submit
+## 5. FINAL REPORT (after Phase 11)
+Give me: what changed per phase (one line each), the before/after evaluation table, the list of every file created/modified, every feature flag, anything you could not verify, and recommendations (for example: the committed `firebase-service-account.json` should be rotated and git-ignored if it was ever pushed; consider git-ignoring `chroma_db/` and de-duplicating the two `eng.traineddata` files; the knowledge base needs more statutes; labels need lawyer and native-speaker review). Do not act on those recommendations yourself.
 
-## STAGE 6 — Status Auto-Completion
-Write a cron job (using node-cron) that runs every hour:
-- Finds all bookings with status = 'confirmed' where date+time has passed
-- Updates their status to 'completed'
-Install node-cron, set it up in index.js
+## 6. HOW TO START
+1. Confirm the working tree is clean and you are on an up-to-date main. If not, stop and tell me.
+2. Read the files named in section 0, then re-verify each diagnosed cause in sections 1 (a short reproduction each) and note any that turn out wrong in the Phase 8 log.
+3. Begin Phase 8 only. Stop at the end of Phase 8 and wait for my "continue".
 
-## STAGE 7 — Basic Auth (Optional but recommended)
-Add simple JWT-based auth:
-- POST /api/auth/register — hash password with bcrypt, save user
-- POST /api/auth/login — compare hash, return JWT
-- Middleware: verifyToken.js — protect booking and review routes
-- Frontend: store token in memory (not localStorage), attach as Authorization header
+</USER_REQUEST>
+<ADDITIONAL_METADATA>
+The current local time is: 2026-10-11T01:03:08+05:30.
 
----
-
-Start with Stage 1. Show me the exact folder structure, all files with code, and tell me what to run to confirm it works before we move to Stage 2.
+The user's current state is as follows:
+Active Document: c:\Users\keert\Desktop\projects\lawhelp\scratch\test_expanded_rules.js (LANGUAGE_JAVASCRIPT)
+Cursor is on line: 1
+Other open documents:
+- c:\Users\keert\Desktop\projects\lawhelp\scratch\test_sale_deed_pipeline.py (LANGUAGE_PYTHON)
+- c:\Users\keert\Desktop\projects\lawhelp\README.md (LANGUAGE_MARKDOWN)
+- c:\Users\keert\Desktop\projects\lawhelp\server\.env (LANGUAGE_UNSPECIFIED)
+- c:\Users\keert\Desktop\projects\lawhelp\ai-service\.env (LANGUAGE_UNSPECIFIED)
+- c:\Users\keert\Desktop\projects\lawhelp\scratch\test_expanded_rules.js (LANGUAGE_JAVASCRIPT)
+Running terminal commands:
+- node index.js (in c:\Users\keert\Desktop\projects\lawhelp\server, running for 1h15m58s)
+- uvicorn main:app --reload --port 8000 (in c:\Users\keert\Desktop\projects\lawhelp\ai-service, running for 1h14m21s)
+- npm run dev (in c:\Users\keert\Desktop\projects\lawhelp\project, running for 1h14m8s)
+</ADDITIONAL_METADATA>
+<USER_SETTINGS_CHANGE>
+The user changed setting `Model Selection` from Claude Sonnet 5.5 (Low) to Claude Sonnet 5.5 (Medium). No need to comment on this change if the user doesn't ask about it. If reporting what model you are, please use a human readable name instead of the exact string.
+</USER_SETTINGS_CHANGE>

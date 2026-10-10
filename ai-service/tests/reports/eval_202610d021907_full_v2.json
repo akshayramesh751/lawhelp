@@ -1,0 +1,85 @@
+{
+  "run_name": "full_v2",
+  "timestamp": "2026-10-11T02:19:07.298357",
+  "splits": {
+    "dev": {
+      "total": 21,
+      "segmentation_correct": 17,
+      "risk_exact_match": 94,
+      "flagged": 0,
+      "true_positives": 2,
+      "false_positives": 1,
+      "false_negatives": 14,
+      "controls_flagged": 0,
+      "precision": 0.6666666666666666,
+      "recall": 0.125,
+      "f1": 0.21052631578947367
+    },
+    "heldout": {
+      "total": 7,
+      "segmentation_correct": 6,
+      "risk_exact_match": 30,
+      "flagged": 0,
+      "true_positives": 0,
+      "false_positives": 0,
+      "false_negatives": 7,
+      "controls_flagged": 0,
+      "precision": 0,
+      "recall": 0.0,
+      "f1": 0
+    }
+  },
+  "domain_results": {
+    "employment": {
+      "total": 8,
+      "risk_exact_match": 33,
+      "segmentation_correct": 4
+    },
+    "rental": {
+      "total": 8,
+      "risk_exact_match": 41,
+      "segmentation_correct": 8
+    },
+    "nda": {
+      "total": 4,
+      "risk_exact_match": 17,
+      "segmentation_correct": 3
+    },
+    "vendor_msa": {
+      "total": 4,
+      "risk_exact_match": 16,
+      "segmentation_correct": 4
+    },
+    "criminal_bond": {
+      "total": 4,
+      "risk_exact_match": 17,
+      "segmentation_correct": 4
+    }
+  },
+  "avg_severity": {
+    "control": 0.0,
+    "mild": 0.42857142857142855,
+    "moderate": 0.14285714285714285,
+    "extreme": 0.42857142857142855
+  },
+  "confusion_matrix": {
+    "NO_ISSUE_DETECTED": {
+      "NO_ISSUE_DETECTED": 124,
+      "ONE_SIDED": 1
+    },
+    "ONE_SIDED": {
+      "NO_ISSUE_DETECTED": 11
+    },
+    "HIGH_RISK": {
+      "ONE_SIDED": 1,
+      "POTENTIALLY_UNENFORCEABLE": 1,
+      "NO_ISSUE_DETECTED": 6
+    },
+    "REQUIRES_REVIEW": {
+      "NO_ISSUE_DETECTED": 2
+    },
+    "POTENTIALLY_UNENFORCEABLE": {
+      "NO_ISSUE_DETECTED": 2
+    }
+  }
+}

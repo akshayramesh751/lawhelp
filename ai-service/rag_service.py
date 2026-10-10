@@ -290,8 +290,8 @@ class LegalRAGStore:
         before invoking expensive LLM reasoning.
         """
         text_lower = clause_text.lower()
-        red_flag_terms = ["waive", "forfeit", "indemnif", "unlimited", "penalty", "compete", "bar", "prohibit", "sole discretion", "unilateral", "without notice", "immediate effect", "hold harmless"]
-        has_red_flags = any(k in text_lower for k in red_flag_terms)
+        red_flag_terms = ["waive", "forfeit", "indemnif", "unlimited", "penalty", "compete", "prohibit", "sole discretion", "unilateral", "without notice", "immediate effect", "hold harmless"]
+        has_red_flags = any(k in text_lower for k in red_flag_terms) or re.search(r'\bbar\b', text_lower)
 
         if has_red_flags:
             return {

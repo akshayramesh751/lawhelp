@@ -1,0 +1,17 @@
+DOCUMENT ID: 9
+DOMAIN: NDA
+
+Section 1
+Confidential Information: Includes all non-public information disclosed by either party.
+
+Section 2
+Obligations: Both parties agree to use reasonable care to protect confidential information.
+
+Section 3
+Term: Confidentiality survives for 3 years after the termination of this agreement.
+
+Section 4
+Remedies: Parties may seek injunctive relief for breach.
+
+Section 5
+Governing Law: Governed by the laws of India.
